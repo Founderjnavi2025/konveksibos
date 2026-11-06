@@ -24,6 +24,10 @@ let currentJobTab = 'Aktif';
 
 function saveWorkers() {
   localStorage.setItem('kb_workers', JSON.stringify(workers));
+
+  if (window.KBCloud?.saveWorkers) {
+    window.KBCloud.saveWorkers();
+  }
 }
 
 function setActiveMenu(page) {
@@ -796,6 +800,10 @@ const defaultRates = {
 
 function saveJobs() {
   localStorage.setItem('kb_jobs', JSON.stringify(jobs));
+
+  if (window.KBCloud?.saveJobs) {
+    window.KBCloud.saveJobs();
+  }
 }
 
 
@@ -2003,3 +2011,33 @@ function renderLaporan(selectedMonth) {
     </section>
   `;
 }
+
+// ==========================================
+// KONVEKSIBOS CLOUD BRIDGE
+// ==========================================
+window.KBApp = {
+  getData() {
+    return { workers, jobs, currentPage };
+  },
+
+  setCloudData(data) {
+    workers = data.workers || [];
+    jobs = data.jobs || [];
+
+    localStorage.setItem('kb_workers', JSON.stringify(workers));
+    localStorage.setItem('kb_jobs', JSON.stringify(jobs));
+
+    navigate('Dashboard');
+  },
+
+  cloudReady() {
+    return {
+      workers: [...workers],
+      jobs: [...jobs]
+    };
+  },
+
+  refresh() {
+    navigate(currentPage);
+  }
+};
