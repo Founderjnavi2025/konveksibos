@@ -182,6 +182,23 @@ td{color:#dce5df}
   <section class="section">
    <div class="section-head">
     <div>
+     <h3>◆ CREATE BUSINESS ACCOUNT</h3>
+     <div class="small">Buat akun pemilik dan workspace secara otomatis</div>
+    </div>
+   </div>
+   <div style="padding:20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+    <input id="newFullName" placeholder="Nama pemilik">
+    <input id="newEmail" type="email" placeholder="Email login">
+    <input id="newPassword" type="password" placeholder="Password minimal 8 karakter">
+    <input id="newBusiness" placeholder="Nama usaha / workspace">
+    <button class="btn full" id="createAccount" style="margin:0;grid-column:1/-1">＋ CREATE ACCOUNT & WORKSPACE</button>
+    <div class="small" id="createMessage" style="grid-column:1/-1"></div>
+   </div>
+  </section>
+
+  <section class="section">
+   <div class="section-head">
+    <div>
      <h3>WORKSPACE MANAGEMENT</h3>
      <div class="small">Global business directory</div>
     </div>
@@ -347,6 +364,45 @@ td{color:#dce5df}
    showError(e);
    button.disabled = false;
    alert('Gagal mengubah status: '+e.message);
+  }
+ });
+
+
+ $('createAccount').addEventListener('click', async () => {
+  const button = $('createAccount');
+  const message = $('createMessage');
+  const payload = {
+   full_name: $('newFullName').value.trim(),
+   email: $('newEmail').value.trim(),
+   password: $('newPassword').value,
+   business_name: $('newBusiness').value.trim()
+  };
+
+  if (!payload.full_name || !payload.email || !payload.password || !payload.business_name) {
+   message.textContent = 'Lengkapi semua kolom.';
+   return;
+  }
+
+  button.disabled = true;
+  button.textContent = 'CREATING ACCOUNT...';
+  message.textContent = 'Memproses akun dan workspace...';
+
+  try {
+   const { data, error } = await sb.functions.invoke('admin-create-account', { body: payload });
+   if (error) throw error;
+   if (!data?.success) throw new Error(data?.error || 'Gagal membuat akun.');
+
+   message.textContent = '✓ ' + data.message + ' Login: ' + data.user.email;
+   $('newFullName').value = '';
+   $('newEmail').value = '';
+   $('newPassword').value = '';
+   $('newBusiness').value = '';
+   await loadData();
+  } catch (error) {
+   message.textContent = 'ERROR: ' + (error.message || error);
+  } finally {
+   button.disabled = false;
+   button.textContent = '＋ CREATE ACCOUNT & WORKSPACE';
   }
  });
 
