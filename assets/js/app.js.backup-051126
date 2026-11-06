@@ -1,0 +1,674 @@
+const content = document.querySelector('.content');
+const dashboardHTML = content.innerHTML;
+
+const pageTitle = document.getElementById('pageTitle');
+const breadcrumb = document.getElementById('breadcrumb');
+const description = document.getElementById('pageDescription');
+const mainAction = document.getElementById('mainAction');
+let currentPage = 'Dashboard';
+
+const descriptions = {
+  Dashboard: 'Pantau aktivitas dan kondisi konveksi dalam satu tempat.',
+  Pekerja: 'Kelola data dan daftar pekerja konveksi.',
+  Pekerjaan: 'Catat dan kelola seluruh pekerjaan produksi.',
+  Monitor: 'Pantau barang keluar, proses, dan barang masuk.',
+  Payroll: 'Kelola perhitungan upah dan pembayaran pekerja.',
+  Keuangan: 'Pantau pemasukan dan pengeluaran bisnis.',
+  Laporan: 'Lihat ringkasan dan riwayat aktivitas bisnis.'
+};
+
+let workers = JSON.parse(localStorage.getItem('kb_workers') || '[]');
+let editingId = null;
+
+function saveWorkers() {
+  localStorage.setItem('kb_workers', JSON.stringify(workers));
+}
+
+function setActiveMenu(page) {
+  document.querySelectorAll('[data-page]').forEach(button => {
+    button.classList.toggle('active', button.dataset.page === page);
+  });
+}
+
+function navigate(page) {
+  currentPage = page;
+  setActiveMenu(page);
+
+  pageTitle.textContent = page;
+  breadcrumb.textContent = page;
+  description.textContent = descriptions[page] || '';
+
+  if (page === 'Dashboard') {
+    content.innerHTML = dashboardHTML;
+    mainAction.style.display = '';
+    mainAction.textContent = '+ Catat pekerjaan';
+    renderDashboard();
+  } else if (page === 'Pekerja') {
+    renderWorkers();
+  } else if (page === 'Pekerjaan') {
+    renderJobs();
+  } else {
+    content.innerHTML = `
+      <section class="panel">
+        <h2>${page}</h2>
+        <p>Modul ini akan dibangun pada tahap berikutnya.</p>
+      </section>
+    `;
+    mainAction.style.display = 'none';
+  }
+}
+
+
+function renderDashboard() {
+  const metrics = document.querySelectorAll('.metrics .metric');
+
+  const totalQuantity = jobs.reduce((sum, job) =>
+    sum + Number(job.quantity || 0), 0);
+
+  const totalReturned = jobs.reduce((sum, job) =>
+    sum + Number(job.returned || 0), 0);
+
+  const remaining = Math.max(0, totalQuantity - totalReturned);
+
+  const activeWorkers = workers.filter(w =>
+    w.status === 'Aktif'
+  ).length;
+
+  const payroll = jobs.reduce((sum, job) =>
+    sum + calculateJobPay(job), 0);
+
+  const format = value => Number(value).toLocaleString('id-ID');
+
+  if (metrics.length >= 4) {
+    metrics[0].querySelector('strong').innerHTML =
+      `${format(totalQuantity)} <small>pcs</small>`;
+    metrics[0].querySelector('p').textContent =
+      `${jobs.length} pekerjaan tercatat`;
+
+    metrics[1].querySelector('strong').textContent =
+      format(activeWorkers);
+    metrics[1].querySelector('p').textContent =
+      `Dari ${workers.length} pekerja terdaftar`;
+
+    metrics[2].querySelector('strong').innerHTML =
+      `${format(remaining)} <small>pcs</small>`;
+    metrics[2].querySelector('p').textContent =
+      'Barang belum disetor';
+
+    metrics[3].querySelector('strong').textContent =
+      `Rp ${format(Math.round(payroll))}`;
+    metrics[3].querySelector('p').textContent =
+      'Estimasi upah barang disetor';
+  }
+
+  // Aktivitas pekerjaan terbaru
+  const tbody = document.querySelector(
+    '.dashboard-grid .panel table tbody'
+  );
+
+  if (tbody) {
+    tbody.innerHTML = jobs.slice(0, 5).map(job => {
+      const worker = workers.find(w => w.id === job.workerId);
+      const left = Math.max(
+        0,
+        Number(job.quantity) - Number(job.returned)
+      );
+
+      const status = left === 0
+        ? 'Selesai'
+        : Number(job.returned) > 0
+          ? 'Sebagian setor'
+          : 'Belum setor';
+
+      return `
+        <tr>
+          <td><strong>${escapeHTML(worker?.name || 'Pekerja tidak ditemukan')}</strong></td>
+          <td>${escapeHTML(job.type)} — ${escapeHTML(job.product)}</td>
+          <td>${format(job.quantity)} pcs</td>
+          <td>${status}</td>
+        </tr>
+      `;
+    }).join('') || `
+      <tr><td colspan="4">Belum ada aktivitas pekerjaan.</td></tr>
+    `;
+  }
+
+  // Keuangan belum punya modul transaksi
+  const finance = document.querySelector('.finance');
+  if (finance) {
+    finance.innerHTML = `
+      <span>Data transaksi keuangan belum tersedia.</span>
+      <p>Modul keuangan belum dihubungkan.</p>
+    `;
+  }
+
+  // Progres barang
+  const progress = document.querySelector('.progress-list');
+
+  if (progress) {
+    const returnedPercent = totalQuantity
+      ? (totalReturned / totalQuantity) * 100
+      : 0;
+
+    const remainingPercent = totalQuantity
+      ? (remaining / totalQuantity) * 100
+      : 0;
+
+    progress.innerHTML = `
+      <div>
+        <p>Sudah disetor <b>${returnedPercent.toFixed(1)}%</b></p>
+        <div class="track">
+          <i style="width:${returnedPercent}%"></i>
+        </div>
+      </div>
+      <div>
+        <p>Belum disetor <b>${remainingPercent.toFixed(1)}%</b></p>
+        <div class="track">
+          <i style="width:${remainingPercent}%"></i>
+        </div>
+      </div>
+    `;
+  }
+}
+
+function renderWorkers() {
+  mainAction.style.display = '';
+  mainAction.textContent = '+ Tambah pekerja';
+
+  content.innerHTML = `
+    <section class="panel worker-form-panel">
+      <div class="panel-heading">
+        <div>
+          <h2 id="formTitle">Tambah pekerja</h2>
+          <p>Masukkan identitas pekerja konveksi</p>
+        </div>
+      </div>
+
+      <form id="workerForm" class="worker-form">
+        <label>
+          Nama pekerja
+          <input id="workerName" required maxlength="80"
+            placeholder="Contoh: Bambang">
+        </label>
+
+        <label>
+          Nomor HP
+          <input id="workerPhone" type="tel" maxlength="20"
+            placeholder="Opsional">
+        </label>
+
+        <label>
+          Bidang pekerjaan
+          <select id="workerRole" required>
+            <option value="">Pilih bidang</option>
+            <option>Obras</option>
+            <option>Jahit</option>
+            <option>Kam</option>
+            <option>Kancing</option>
+            <option>Lainnya</option>
+          </select>
+        </label>
+
+        <label>
+          Status
+          <select id="workerStatus">
+            <option value="Aktif">Aktif</option>
+            <option value="Nonaktif">Nonaktif</option>
+          </select>
+        </label>
+
+        <div class="worker-form-actions">
+          <button class="primary" type="submit" id="saveWorker">
+            Simpan pekerja
+          </button>
+          <button class="secondary" type="button" id="cancelEdit"
+            style="display:none">Batal</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel worker-list-panel">
+      <div class="panel-heading">
+        <div>
+          <h2>Daftar pekerja</h2>
+          <p id="workerCount">0 pekerja terdaftar</p>
+        </div>
+      </div>
+
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Nama</th>
+              <th>Bidang</th>
+              <th>Nomor HP</th>
+              <th>Status</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="workerTable"></tbody>
+        </table>
+      </div>
+      <div id="workerEmpty" class="empty-state">
+        <strong>Belum ada pekerja</strong>
+        <p>Tambahkan pekerja untuk mulai membangun database konveksi.</p>
+      </div>
+    </section>
+  `;
+
+  document.getElementById('workerForm')
+    .addEventListener('submit', submitWorker);
+
+  document.getElementById('cancelEdit')
+    .addEventListener('click', resetForm);
+
+  renderWorkerTable();
+}
+
+function submitWorker(event) {
+  event.preventDefault();
+
+  const name = document.getElementById('workerName').value.trim();
+  const phone = document.getElementById('workerPhone').value.trim();
+  const role = document.getElementById('workerRole').value;
+  const status = document.getElementById('workerStatus').value;
+
+  if (!name || !role) return;
+
+  if (editingId) {
+    workers = workers.map(worker =>
+      worker.id === editingId
+        ? { ...worker, name, phone, role, status }
+        : worker
+    );
+  } else {
+    workers.push({
+      id: crypto.randomUUID(),
+      name,
+      phone,
+      role,
+      status,
+      createdAt: new Date().toISOString()
+    });
+  }
+
+  saveWorkers();
+  resetForm();
+  renderWorkerTable();
+}
+
+function renderWorkerTable() {
+  const tbody = document.getElementById('workerTable');
+  const empty = document.getElementById('workerEmpty');
+
+  document.getElementById('workerCount').textContent =
+    `${workers.length} pekerja terdaftar`;
+
+  empty.style.display = workers.length ? 'none' : 'block';
+
+  tbody.innerHTML = workers.map(worker => `
+    <tr>
+      <td><strong>${escapeHTML(worker.name)}</strong></td>
+      <td>${escapeHTML(worker.role)}</td>
+      <td>${escapeHTML(worker.phone || '-')}</td>
+      <td>
+        <span class="status ${worker.status === 'Aktif' ? 'done' : 'waiting'}">
+          ${worker.status}
+        </span>
+      </td>
+      <td>
+        <div class="worker-actions">
+          <button class="text-button" data-edit="${worker.id}">Edit</button>
+          <button class="text-button danger" data-delete="${worker.id}">Hapus</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+
+  tbody.querySelectorAll('[data-edit]').forEach(button => {
+    button.addEventListener('click', () => editWorker(button.dataset.edit));
+  });
+
+  tbody.querySelectorAll('[data-delete]').forEach(button => {
+    button.addEventListener('click', () => deleteWorker(button.dataset.delete));
+  });
+}
+
+function editWorker(id) {
+  const worker = workers.find(item => item.id === id);
+  if (!worker) return;
+
+  editingId = id;
+  document.getElementById('workerName').value = worker.name;
+  document.getElementById('workerPhone').value = worker.phone;
+  document.getElementById('workerRole').value = worker.role;
+  document.getElementById('workerStatus').value = worker.status;
+  document.getElementById('formTitle').textContent = 'Edit pekerja';
+  document.getElementById('saveWorker').textContent = 'Simpan perubahan';
+  document.getElementById('cancelEdit').style.display = '';
+  document.getElementById('workerName').focus();
+}
+
+function deleteWorker(id) {
+  const worker = workers.find(item => item.id === id);
+  if (!worker) return;
+
+  if (!confirm(`Hapus pekerja ${worker.name}?`)) return;
+
+  workers = workers.filter(item => item.id !== id);
+  saveWorkers();
+  renderWorkerTable();
+}
+
+function resetForm() {
+  editingId = null;
+  document.getElementById('workerForm').reset();
+  document.getElementById('formTitle').textContent = 'Tambah pekerja';
+  document.getElementById('saveWorker').textContent = 'Simpan pekerja';
+  document.getElementById('cancelEdit').style.display = 'none';
+}
+
+function escapeHTML(value) {
+  return String(value).replace(/[&<>"']/g, char => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  })[char]);
+}
+
+document.querySelectorAll('[data-page]').forEach(button => {
+  button.addEventListener('click', () => navigate(button.dataset.page));
+});
+// MAIN ACTION HANDLER - EVENT DELEGATION
+content.addEventListener('click', (event) => {
+  const button = event.target.closest('#mainAction');
+  if (!button) return;
+
+  if (currentPage === 'Dashboard') {
+    navigate('Pekerjaan');
+  } else if (currentPage === 'Pekerja') {
+    document.getElementById('workerName')?.focus();
+  }
+});
+
+// ===============================
+// MODUL PEKERJAAN
+// ===============================
+
+let jobs = JSON.parse(localStorage.getItem('kb_jobs') || '[]');
+
+const defaultRates = {
+  Obras: 8000,
+  Jahit: 6000,
+  Kam: 5000,
+  Kancing: 300,
+  Lainnya: 0
+};
+
+function saveJobs() {
+  localStorage.setItem('kb_jobs', JSON.stringify(jobs));
+}
+
+function renderJobs() {
+  mainAction.style.display = '';
+  mainAction.textContent = '+ Catat pekerjaan';
+
+  const activeWorkers = workers.filter(w =>
+    w.status === 'Aktif' &&
+    !jobs.some(job =>
+      job.workerId === w.id &&
+      job.returned < job.quantity
+    )
+  );
+
+  content.innerHTML = `
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <h2>Catat pekerjaan baru</h2>
+          <p>Distribusi barang kepada pekerja</p>
+        </div>
+      </div>
+
+      ${activeWorkers.length ? `
+      <form id="jobForm" class="worker-form" style="display:grid">
+        <label>
+          Pekerja
+          <select id="jobWorker" required>
+            <option value="">Pilih pekerja</option>
+            ${activeWorkers.map(w =>
+              `<option value="${w.id}">${escapeHTML(w.name)} — ${escapeHTML(w.role)}</option>`
+            ).join('')}
+          </select>
+        </label>
+
+        <label>
+          Nama barang / produk
+          <input id="jobProduct" required maxlength="80"
+            placeholder="Contoh: Kaos oblong">
+        </label>
+
+        <label>
+          Jenis pekerjaan
+          <select id="jobType" required>
+            <option value="">Pilih pekerjaan</option>
+            <option>Obras</option>
+            <option>Jahit</option>
+            <option>Kam</option>
+            <option>Kancing</option>
+            <option>Lainnya</option>
+          </select>
+        </label>
+
+        <label>
+          Jumlah barang diberikan
+          <input id="jobQty" type="number" min="1" required
+            placeholder="Contoh: 120">
+        </label>
+
+        <label>
+          Tarif
+          <input id="jobRate" type="number" min="0" required value="8000">
+        </label>
+
+        <label>
+          Satuan tarif
+          <select id="jobUnit">
+            <option value="lusin">Per lusin</option>
+            <option value="pcs">Per pcs</option>
+          </select>
+        </label>
+
+        <div class="worker-form-actions">
+          <button class="primary" type="submit">Simpan pekerjaan</button>
+        </div>
+      </form>
+      ` : `
+      <div class="empty-state">
+        <strong>Belum ada pekerja aktif</strong>
+        <p>Daftarkan pekerja terlebih dahulu sebelum mencatat pekerjaan.</p>
+      </div>
+      `}
+    </section>
+
+    <section class="panel worker-list-panel">
+      <div class="panel-heading">
+        <div>
+          <h2>Daftar pekerjaan</h2>
+          <p id="jobCount">0 pekerjaan tercatat</p>
+        </div>
+      </div>
+
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Pekerja</th>
+              <th>Barang</th>
+              <th>Jumlah</th>
+              <th>Disetor</th>
+              <th>Sisa</th>
+              <th>Upah</th>
+              <th>Status</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="jobTable"></tbody>
+        </table>
+      </div>
+
+      <div id="jobEmpty" class="empty-state">
+        <strong>Belum ada pekerjaan</strong>
+        <p>Catatan pekerjaan yang dibuat akan muncul di sini.</p>
+      </div>
+    </section>
+  `;
+
+  const typeSelect = document.getElementById('jobType');
+  typeSelect?.addEventListener('change', () => {
+    const type = typeSelect.value;
+    document.getElementById('jobRate').value = defaultRates[type] ?? 0;
+    document.getElementById('jobUnit').value =
+      type === 'Kancing' ? 'pcs' : 'lusin';
+  });
+
+  document.getElementById('jobForm')
+    ?.addEventListener('submit', createJob);
+
+  renderJobTable();
+}
+
+function createJob(event) {
+  event.preventDefault();
+
+  const workerId = document.getElementById('jobWorker').value;
+  const worker = workers.find(w => w.id === workerId);
+
+  if (!worker || worker.status !== 'Aktif') {
+    alert('Pekerja tidak valid atau sudah nonaktif.');
+    return;
+  }
+
+  const hasActiveJob = jobs.some(job =>
+    job.workerId === workerId &&
+    job.returned < job.quantity
+  );
+
+  if (hasActiveJob) {
+    alert('Pekerja masih memiliki pekerjaan aktif. Selesaikan setoran terlebih dahulu.');
+    renderJobs();
+    return;
+  }
+
+  const quantity = Number(document.getElementById('jobQty').value);
+  const rate = Number(document.getElementById('jobRate').value);
+
+  if (!Number.isInteger(quantity) || quantity <= 0 || rate < 0) {
+    alert('Periksa jumlah barang dan tarif.');
+    return;
+  }
+
+  jobs.unshift({
+    id: crypto.randomUUID(),
+    workerId,
+    product: document.getElementById('jobProduct').value.trim(),
+    type: document.getElementById('jobType').value,
+    quantity,
+    returned: 0,
+    rate,
+    unit: document.getElementById('jobUnit').value,
+    createdAt: new Date().toISOString()
+  });
+
+  saveJobs();
+  renderJobs();
+
+  // Setelah berhasil menyimpan, form ditutup.
+  mainAction.style.display = '';
+  mainAction.textContent = '+ Catat pekerjaan';
+}
+
+function calculateJobPay(job) {
+  const completed = job.returned;
+  return job.unit === 'lusin'
+    ? (completed / 12) * job.rate
+    : completed * job.rate;
+}
+
+function renderJobTable() {
+  const tbody = document.getElementById('jobTable');
+  if (!tbody) return;
+
+  document.getElementById('jobCount').textContent =
+    `${jobs.length} pekerjaan tercatat`;
+
+  document.getElementById('jobEmpty').style.display =
+    jobs.length ? 'none' : 'block';
+
+  tbody.innerHTML = jobs.map(job => {
+    const worker = workers.find(w => w.id === job.workerId);
+    const remaining = job.quantity - job.returned;
+    const status = remaining === 0
+      ? 'Selesai'
+      : job.returned > 0 ? 'Sebagian setor' : 'Belum setor';
+
+    return `
+      <tr>
+        <td><strong>${escapeHTML(worker?.name || 'Pekerja tidak ditemukan')}</strong></td>
+        <td>${escapeHTML(job.product)}<br><small>${escapeHTML(job.type)}</small></td>
+        <td>${job.quantity} pcs</td>
+        <td>${job.returned} pcs</td>
+        <td>${remaining} pcs</td>
+        <td>Rp ${Math.round(calculateJobPay(job)).toLocaleString('id-ID')}</td>
+        <td><span class="status ${remaining === 0 ? 'done' : 'progress'}">${status}</span></td>
+        <td>
+          ${remaining > 0
+            ? `<button class="text-button" data-deposit="${job.id}">Catat setor</button>`
+            : '<span>—</span>'}
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  tbody.querySelectorAll('[data-deposit]').forEach(button => {
+    button.addEventListener('click', () => recordDeposit(button.dataset.deposit));
+  });
+}
+
+function recordDeposit(id) {
+  const job = jobs.find(j => j.id === id);
+  if (!job) return;
+
+  const remaining = job.quantity - job.returned;
+  const input = prompt(`Sisa barang ${remaining} pcs. Masukkan jumlah setoran:`);
+
+  if (input === null || input.trim() === '') return;
+
+  const quantity = Number(input);
+
+  if (!Number.isInteger(quantity) || quantity <= 0 || quantity > remaining) {
+    alert('Jumlah setoran tidak valid. Periksa kembali jumlah barang.');
+    return;
+  }
+
+  job.returned += quantity;
+  saveJobs();
+  renderJobTable();
+}
+
+
+function openJobForm() {
+  navigate('Pekerjaan');
+
+  const form = document.getElementById('jobForm');
+
+  if (form) {
+    form.style.display = 'grid';
+    mainAction.textContent = 'Tutup form';
+    document.getElementById('jobWorker')?.focus();
+  }
+}
+
+renderDashboard();
