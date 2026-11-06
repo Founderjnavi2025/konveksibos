@@ -213,6 +213,7 @@
     });
 
     panel.remove();
+    document.body.classList.remove('auth-pending');
     if (app) app.style.display = '';
 
     window.KBCloud = {
