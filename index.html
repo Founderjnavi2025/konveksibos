@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f6f8">
+  <title>KonveksiBos — Business Management</title>
+  <link rel="stylesheet" href="assets/css/style.css?v=12">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">KB</div>
+        <div>
+          <strong>KonveksiBos</strong>
+          <small>Business Workspace</small>
+        </div>
+      </div>
+
+      <div class="nav-label">WORKSPACE</div>
+      <nav class="navigation">
+        <button class="active" data-page="Dashboard">Dashboard</button>
+        <button data-page="Pekerja">Pekerja</button>
+        <button data-page="Pekerjaan">Pekerjaan</button>
+        <button data-page="Monitor">Monitor Gudang</button>
+        <button data-page="Kekurangan">Barang yang Kurang</button>
+      </nav>
+
+      <div class="nav-label">MANAJEMEN</div>
+      <nav class="navigation">
+        <button data-page="Payroll">Payroll</button>
+        <button data-page="Keuangan">Keuangan</button>
+        <button data-page="Laporan">Laporan</button>
+      </nav>
+
+      <div class="workspace">
+        <small>WORKSPACE AKTIF</small>
+        <strong>Konveksi Saya</strong>
+        <span>Ruang aktif</span>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>Workspace / <strong id="breadcrumb">Dashboard</strong></div>
+        <div class="profile">
+          <span>01–07 November 2026</span>
+          <b>BB</b>
+        </div>
+      </header>
+
+      <section class="content">
+        <div class="page-heading">
+          <div>
+            <small>BUSINESS OVERVIEW</small>
+            <h1 id="pageTitle">Dashboard</h1>
+            <p id="pageDescription">
+              Pantau aktivitas dan kondisi konveksi dalam satu tempat.
+            </p>
+          </div>
+          <button class="primary" id="mainAction">+ Catat pekerjaan</button>
+        </div>
+
+        <div class="metrics">
+          <article class="metric">
+            <span>Total pekerjaan</span>
+            <strong>—</strong>
+            <p>Menunggu data</p>
+          </article>
+          <article class="metric">
+            <span>Pekerja aktif</span>
+            <strong>—</strong>
+            <p>Menunggu data</p>
+          </article>
+          <article class="metric">
+            <span>Belum disetor</span>
+            <strong>—</strong>
+            <p>Menunggu data</p>
+          </article>
+          <article class="metric">
+            <span>Estimasi payroll</span>
+            <strong>—</strong>
+            <p>Menunggu data</p>
+          </article>
+        </div>
+
+        <div class="dashboard-grid">
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <h2>Aktivitas pekerjaan</h2>
+                <p>Ringkasan pekerjaan terbaru</p>
+              </div>
+              <button class="text-button">Lihat semua</button>
+            </div>
+
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Pekerja</th>
+                    <th>Jenis pekerjaan</th>
+                    <th>Jumlah</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td colspan="4">Belum ada aktivitas pekerjaan.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <div class="side-panels">
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <h2>Ringkasan keuangan</h2>
+                  <p>Periode berjalan</p>
+                </div>
+              </div>
+              <div class="finance">
+                <span>Data keuangan belum tersedia.</span>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <h2>Progres pekerjaan</h2>
+                  <p>Status barang saat ini</p>
+                </div>
+              </div>
+              <div class="progress-list">
+                <p>Data progres belum tersedia.</p>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <nav class="mobile-nav">
+    <button class="active" data-page="Dashboard">Dashboard</button>
+    <button data-page="Pekerja">Pekerja</button>
+    <button data-page="Pekerjaan">Pekerjaan</button>
+    <button data-page="Monitor">Monitor</button>
+
+    <button type="button" id="moreMenuToggle"
+      aria-expanded="false">Lainnya</button>
+
+    <div class="mobile-more-menu" id="mobileMoreMenu" hidden>
+      <button data-page="Kekurangan">Barang yang Kurang</button>
+      <button data-page="Payroll">Payroll</button>
+      <button data-page="Keuangan">Keuangan</button>
+      <button data-page="Laporan">Laporan</button>
+    </div>
+  </nav>
+
+  <script src="assets/js/app.js?v=4"></script>
+</body>
+</html>
