@@ -62,6 +62,12 @@
 
     if (profileError) throw profileError;
 
+    // SUPER ADMIN: langsung masuk Command Center
+    if (profile?.platform_role === 'super_admin') {
+      window.location.href = 'pages/super-admin.html';
+      return;
+    }
+
     const { data: memberships, error: memberError } = await sb
       .from('room_members')
       .select('room_id,role')
