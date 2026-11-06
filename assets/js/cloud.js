@@ -310,29 +310,44 @@
     }
   };
 
-  document.getElementById('kbRegister').onclick = async () => {
-    try {
-      const email = document.getElementById('kbEmail').value.trim();
-      const password = document.getElementById('kbPassword').value;
+  document.getElementById('kbRegister').onclick = () => {
+    document.getElementById('kbAuthContent').innerHTML = `
+      <h3>Buat akun KonveksiBos</h3>
+      <input id="kbFullName" placeholder="Nama lengkap" style="width:100%;padding:13px;margin:7px 0;box-sizing:border-box">
+      <input id="kbEmail" type="email" placeholder="Email" style="width:100%;padding:13px;margin:7px 0;box-sizing:border-box">
+      <input id="kbPassword" type="password" placeholder="Password minimal 6 karakter" style="width:100%;padding:13px;margin:7px 0;box-sizing:border-box">
+      <button id="kbDoRegister" style="width:100%;padding:13px;margin-top:10px">Buat Akun</button>
+      <button id="kbBackLogin" style="width:100%;padding:13px;margin-top:8px">Kembali ke Login</button>
+      <p id="kbMessage" style="color:#ffbd70"></p>
+    `;
 
-      if (password.length < 6) {
-        return message('Password minimal 6 karakter.');
+    document.getElementById('kbBackLogin').onclick = () => location.reload();
+
+    document.getElementById('kbDoRegister').onclick = async () => {
+      try {
+        const fullName = document.getElementById('kbFullName').value.trim();
+        const email = document.getElementById('kbEmail').value.trim();
+        const password = document.getElementById('kbPassword').value;
+
+        if (!fullName || !email || !password) return message('Semua kolom wajib diisi.');
+        if (password.length < 6) return message('Password minimal 6 karakter.');
+
+        message('Sedang membuat akun...');
+
+        const { data, error } = await sb.auth.signUp({
+          email,
+          password,
+          options: { data: { full_name: fullName } }
+        });
+
+        if (error) throw error;
+
+        if (data.session) await loadWorkspace(data.user);
+        else message('Akun dibuat. Periksa email untuk konfirmasi, lalu login.');
+      } catch (e) {
+        message(e.message);
       }
-
-      const { data, error } = await sb.auth.signUp({
-        email, password
-      });
-
-      if (error) throw error;
-
-      if (data.session) {
-        await loadWorkspace(data.user);
-      } else {
-        message('Registrasi berhasil. Periksa email untuk konfirmasi, lalu login.');
-      }
-    } catch (e) {
-      message(e.message);
-    }
+    };
   };
 
   sb.auth.onAuthStateChange((event, session) => {
