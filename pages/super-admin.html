@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KonveksiBos | Command Center</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../assets/js/supabase.js"></script>
+<style>
+:root {
+  --bg:#080b0e; --panel:#11171b; --panel2:#151d21;
+  --line:#273238; --gold:#e7c66b; --green:#42d99b;
+  --red:#ff7070; --text:#edf2ef; --muted:#83918d;
+}
+*{box-sizing:border-box}
+body{
+ margin:0;background:var(--bg);color:var(--text);
+ font-family:Inter,system-ui,sans-serif;
+}
+button,input{font:inherit}
+button{cursor:pointer}
+#login{
+ min-height:100vh;display:grid;place-items:center;padding:20px;
+ background:radial-gradient(ellipse at 50% 20%,#25301d 0%,#080b0e 65%);
+}
+.login-box{
+ width:100%;max-width:390px;background:var(--panel);
+ border:1px solid #4c482e;border-radius:20px;padding:30px;
+ box-shadow:0 20px 80px #0009;
+}
+.logo{font-size:13px;font-weight:900;letter-spacing:3px;color:var(--gold)}
+h1{font-size:28px;margin:12px 0 5px}
+.sub{color:var(--muted);font-size:13px}
+input{
+ width:100%;padding:14px;margin-top:12px;
+ background:#080d10;border:1px solid var(--line);
+ border-radius:10px;color:white;outline:none;
+}
+input:focus{border-color:var(--gold)}
+.btn{
+ border:0;border-radius:9px;padding:12px 16px;
+ font-weight:800;background:var(--gold);color:#15130b;
+}
+.btn.full{width:100%;margin-top:15px}
+.btn.dark{background:#202a2e;color:white;border:1px solid var(--line)}
+.btn.danger{background:#492323;color:#ffaaaa}
+#message{color:var(--red);font-size:12px;min-height:20px;margin-top:10px}
+#dashboard{display:none;min-height:100vh}
+.sidebar{
+ position:fixed;inset:0 auto 0 0;width:245px;padding:26px 18px;
+ background:#0d1215;border-right:1px solid var(--line);
+ display:flex;flex-direction:column;z-index:5;
+}
+.brand{color:var(--gold);font-weight:950;letter-spacing:2px;font-size:17px}
+.brand small{display:block;color:var(--muted);font-size:10px;letter-spacing:3px;margin-top:5px}
+.nav-title{font-size:10px;color:#697671;letter-spacing:2px;margin:38px 10px 12px}
+.nav-item{
+ padding:13px 12px;border-radius:9px;color:#9ba8a2;
+ font-size:13px;margin:3px 0;
+}
+.nav-item.active{background:#28271c;color:var(--gold);border:1px solid #51472a}
+.sidebar-bottom{margin-top:auto}
+.admin-label{font-size:10px;color:var(--muted);margin-bottom:8px}
+.admin-email{font-size:12px;overflow-wrap:anywhere;margin-bottom:14px}
+.main{margin-left:245px;padding:30px;max-width:1600px}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:30px}
+.eyebrow{color:var(--green);font-size:10px;letter-spacing:3px;font-weight:900}
+h2{font-size:25px;margin:5px 0}
+.date{font-size:12px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px}
+.stat{
+ background:linear-gradient(145deg,#182126,#101619);
+ border:1px solid var(--line);border-radius:14px;padding:20px;
+ min-width:0;
+}
+.stat-label{color:var(--muted);font-size:11px;letter-spacing:1px}
+.stat-value{font-size:32px;font-weight:900;color:var(--gold);margin:10px 0}
+.stat-note{font-size:11px;color:var(--green)}
+.section{
+ background:var(--panel);border:1px solid var(--line);
+ border-radius:14px;margin-top:22px;overflow:hidden;
+}
+.section-head{padding:19px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.section-head h3{font-size:14px;margin:0}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:650px}
+th,td{text-align:left;padding:15px 18px;border-top:1px solid var(--line);font-size:12px}
+th{color:var(--muted);font-weight:600}
+td{color:#dce5df}
+.status{padding:5px 9px;border-radius:20px;font-size:10px;font-weight:800}
+.active-status{background:#143c2e;color:var(--green)}
+.suspended-status{background:#482525;color:#ff8989}
+.actions{display:flex;gap:7px}
+.actions button{font-size:10px;padding:7px 9px}
+.empty{text-align:center;padding:35px;color:var(--muted)}
+.toolbar{display:flex;gap:10px;align-items:center}
+.toolbar input{margin:0;max-width:230px;padding:10px}
+.small{font-size:11px;color:var(--muted)}
+@media(max-width:950px){
+ .sidebar{width:68px;padding:22px 9px}
+ .brand{font-size:0;text-align:center}
+ .brand:first-letter{font-size:20px}
+ .brand small,.nav-title,.nav-item span,.admin-label,.admin-email{display:none}
+ .nav-item{text-align:center;font-size:18px}
+ .main{margin-left:68px;padding:22px 15px}
+ .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:520px){
+ .main{padding:18px 11px}
+ .topbar{align-items:flex-start}
+ .topbar .btn{padding:9px;font-size:11px}
+ .stat{padding:14px}
+ .stat-value{font-size:25px}
+ .section-head{align-items:flex-start;flex-direction:column}
+}
+</style>
+</head>
+<body>
+
+<div id="login">
+ <div class="login-box">
+  <div class="logo">◆ KONVEKSIBOS</div>
+  <h1>Command Center</h1>
+  <div class="sub">Platform administration / restricted access</div>
+  <form id="loginForm">
+   <input id="email" type="email" placeholder="Super Admin Email" required>
+   <input id="password" type="password" placeholder="Password" required>
+   <button class="btn full" type="submit">ACCESS PLATFORM →</button>
+  </form>
+  <div id="message"></div>
+ </div>
+</div>
+
+<div id="dashboard">
+ <aside class="sidebar">
+  <div class="brand">◆ KONVEKSIBOS<small>COMMAND CENTER</small></div>
+  <div class="nav-title">PLATFORM</div>
+  <div class="nav-item active">◈ <span>Overview</span></div>
+  <div class="nav-item">▤ <span>Workspaces</span></div>
+  <div class="nav-item">◎ <span>Users</span></div>
+  <div class="nav-item">⌘ <span>System Control</span></div>
+  <div class="sidebar-bottom">
+   <div class="admin-label">SIGNED IN AS</div>
+   <div class="admin-email" id="adminEmail">-</div>
+   <button class="btn dark full" id="logout">LOGOUT ↗</button>
+  </div>
+ </aside>
+
+ <main class="main">
+  <header class="topbar">
+   <div>
+    <div class="eyebrow">● PLATFORM ONLINE</div>
+    <h2>Executive Overview</h2>
+    <div class="date" id="today"></div>
+   </div>
+   <button class="btn" id="refresh">↻ REFRESH DATA</button>
+  </header>
+
+  <div class="grid">
+   <div class="stat">
+    <div class="stat-label">TOTAL WORKSPACES</div>
+    <div class="stat-value" id="totalRooms">-</div>
+    <div class="stat-note">All registered businesses</div>
+   </div>
+   <div class="stat">
+    <div class="stat-label">REGISTERED USERS</div>
+    <div class="stat-value" id="totalUsers">-</div>
+    <div class="stat-note">Platform accounts</div>
+   </div>
+   <div class="stat">
+    <div class="stat-label">ACTIVE WORKSPACES</div>
+    <div class="stat-value" id="activeRooms">-</div>
+    <div class="stat-note">Operational</div>
+   </div>
+   <div class="stat">
+    <div class="stat-label">SUSPENDED</div>
+    <div class="stat-value" id="suspendedRooms">-</div>
+    <div class="stat-note">Restricted access</div>
+   </div>
+  </div>
+
+  <section class="section">
+   <div class="section-head">
+    <div>
+     <h3>WORKSPACE MANAGEMENT</h3>
+     <div class="small">Global business directory</div>
+    </div>
+    <div class="toolbar">
+     <input id="search" placeholder="Cari workspace...">
+    </div>
+   </div>
+   <div class="table-wrap">
+    <table>
+     <thead>
+      <tr>
+       <th>WORKSPACE</th><th>OWNER UID</th>
+       <th>CREATED</th><th>STATUS</th><th>ACTION</th>
+      </tr>
+     </thead>
+     <tbody id="roomRows">
+      <tr><td colspan="5" class="empty">Loading platform data...</td></tr>
+     </tbody>
+    </table>
+   </div>
+  </section>
+
+  <section class="section">
+   <div class="section-head">
+    <div>
+     <h3>PLATFORM USERS</h3>
+     <div class="small">Registered profile directory</div>
+    </div>
+   </div>
+   <div class="table-wrap">
+    <table>
+     <thead><tr><th>FULL NAME</th><th>USER ID</th><th>PLATFORM ROLE</th></tr></thead>
+     <tbody id="userRows">
+      <tr><td colspan="3" class="empty">Loading users...</td></tr>
+     </tbody>
+    </table>
+   </div>
+  </section>
+  <p class="small" id="statusMessage">Connected to Supabase</p>
+ </main>
+</div>
+
+<script>
+(() => {
+ const sb = window.sb;
+ const $ = id => document.getElementById(id);
+ let rooms = [];
+
+ if (!sb) {
+  $('message').textContent = 'Supabase gagal dimuat. Periksa koneksi.';
+  return;
+ }
+
+ $('today').textContent = new Date().toLocaleString('id-ID',{
+  dateStyle:'full',timeStyle:'short'
+ });
+
+ function escapeHTML(value) {
+  return String(value ?? '').replace(/[&<>"']/g, c => ({
+   '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+ }
+
+ function showError(error) {
+  $('statusMessage').textContent = 'ERROR: ' + error.message;
+  console.error(error);
+ }
+
+ async function checkAdmin(user) {
+  const {data,error} = await sb.from('profiles')
+   .select('platform_role,full_name')
+   .eq('id',user.id).maybeSingle();
+
+  if (error) throw error;
+  if (data?.platform_role !== 'super_admin') {
+   await sb.auth.signOut();
+   throw new Error('Akses ditolak. Akun bukan Super Admin.');
+  }
+  $('adminEmail').textContent = user.email;
+  $('login').style.display = 'none';
+  $('dashboard').style.display = 'block';
+  await loadData();
+ }
+
+ async function loadData() {
+  $('statusMessage').textContent = 'Mengambil data platform...';
+
+  const [roomResult,userResult] = await Promise.all([
+   sb.from('rooms').select('id,name,owner_id,status,created_at').order('created_at',{ascending:false}),
+   sb.from('profiles').select('id,full_name,platform_role').order('created_at',{ascending:false})
+  ]);
+
+  if (roomResult.error) throw roomResult.error;
+  if (userResult.error) throw userResult.error;
+
+  rooms = roomResult.data || [];
+  const users = userResult.data || [];
+
+  $('totalRooms').textContent = rooms.length;
+  $('totalUsers').textContent = users.length;
+  $('activeRooms').textContent = rooms.filter(r=>r.status==='active').length;
+  $('suspendedRooms').textContent = rooms.filter(r=>r.status==='suspended').length;
+
+  renderRooms();
+  $('userRows').innerHTML = users.map(u=>`
+   <tr>
+    <td>${escapeHTML(u.full_name || 'Tanpa nama')}</td>
+    <td>${escapeHTML(u.id)}</td>
+    <td>${u.platform_role==='super_admin'
+      ? '<span class="status active-status">SUPER ADMIN</span>'
+      : '<span class="small">USER</span>'}</td>
+   </tr>
+  `).join('') || '<tr><td colspan="3" class="empty">Belum ada pengguna</td></tr>';
+
+  $('statusMessage').textContent = 'Data berhasil diperbarui.';
+ }
+
+ function renderRooms() {
+  const query = $('search').value.toLowerCase();
+  const filtered = rooms.filter(r=>
+   (r.name || '').toLowerCase().includes(query) ||
+   (r.owner_id || '').toLowerCase().includes(query)
+  );
+
+  $('roomRows').innerHTML = filtered.map(r=>{
+   const suspended = r.status === 'suspended';
+   return `<tr>
+    <td><strong>${escapeHTML(r.name)}</strong></td>
+    <td>${escapeHTML(r.owner_id)}</td>
+    <td>${r.created_at ? new Date(r.created_at).toLocaleDateString('id-ID') : '-'}</td>
+    <td><span class="status ${suspended?'suspended-status':'active-status'}">
+     ${suspended?'SUSPENDED':'ACTIVE'}</span></td>
+    <td><div class="actions">
+     <button class="btn ${suspended?'':'danger'}"
+      data-action="${suspended?'activate':'suspend'}"
+      data-id="${escapeHTML(r.id)}">
+      ${suspended?'AKTIFKAN':'SUSPEND'}
+     </button>
+    </div></td>
+   </tr>`;
+  }).join('') || '<tr><td colspan="5" class="empty">Workspace tidak ditemukan</td></tr>';
+ }
+
+ $('roomRows').addEventListener('click',async e=>{
+  const button = e.target.closest('button[data-action]');
+  if (!button) return;
+
+  const action = button.dataset.action;
+  const id = button.dataset.id;
+  const nextStatus = action === 'suspend' ? 'suspended' : 'active';
+  const room = rooms.find(r=>r.id===id);
+  if (!room) return;
+
+  if (!confirm(`${action==='suspend'?'Suspend':'Aktifkan'} workspace "${room.name}"?`)) return;
+
+  button.disabled = true;
+  try {
+   const {error} = await sb.from('rooms')
+    .update({status:nextStatus}).eq('id',id);
+   if (error) throw error;
+   await loadData();
+  } catch(e) {
+   showError(e);
+   button.disabled = false;
+   alert('Gagal mengubah status: '+e.message);
+  }
+ });
+
+ $('search').addEventListener('input',renderRooms);
+ $('refresh').onclick = async ()=>{
+  try { await loadData(); } catch(e) { showError(e); }
+ };
+ $('logout').onclick = ()=>sb.auth.signOut();
+
+ $('loginForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  $('message').textContent='Memeriksa akun...';
+  try {
+   const {data,error} = await sb.auth.signInWithPassword({
+    email:$('email').value.trim(),
+    password:$('password').value
+   });
+   if (error) throw error;
+   await checkAdmin(data.user);
+  } catch(e) {
+   $('message').textContent=e.message;
+  }
+ });
+
+ sb.auth.getSession().then(async ({data,error})=>{
+  if (error) return;
+  if (data.session) {
+   try { await checkAdmin(data.session.user); }
+   catch(e) { $('message').textContent=e.message; }
+  }
+ });
+
+ sb.auth.onAuthStateChange(event=>{
+  if (event==='SIGNED_OUT') {
+   $('dashboard').style.display='none';
+   $('login').style.display='grid';
+  }
+ });
+})();
+</script>
+</body>
+</html>
