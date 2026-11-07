@@ -2639,3 +2639,150 @@ td strong {
     gap: 6px;
   }
 }
+
+/* KONTAK PEKERJA - CLEAN REDESIGN */
+.worker-list-panel .table-scroll {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  overflow: visible;
+}
+
+.worker-contact-list {
+  padding: 0 4px;
+}
+
+.worker-contact-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 8px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.worker-contact-item:last-child {
+  border-bottom-color: transparent;
+}
+
+.worker-contact-profile {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.worker-contact-avatar {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--blue-soft);
+  color: var(--blue);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.worker-contact-info {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.worker-contact-info strong {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.worker-contact-info small {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.worker-contact-arrow {
+  color: var(--muted);
+  font-size: 23px;
+  line-height: 1;
+}
+
+.worker-contact-actions {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.worker-more-btn {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  font-size: 23px;
+  cursor: pointer;
+}
+
+.worker-more-btn:active {
+  background: var(--blue-soft);
+}
+
+.worker-action-menu {
+  display: none;
+  position: absolute;
+  z-index: 20;
+  top: 36px;
+  right: 0;
+  min-width: 125px;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card, #fff);
+  box-shadow: 0 8px 24px rgba(0,0,0,.16);
+}
+
+.worker-contact-item.is-menu-open .worker-action-menu {
+  display: grid;
+}
+
+.worker-action-menu button {
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.worker-action-menu button.delete-action {
+  color: #e05252;
+}
+
+@media(max-width:700px) {
+  .worker-contact-list {
+    padding: 0;
+  }
+
+  .worker-contact-item {
+    padding: 11px 4px;
+  }
+}

@@ -922,18 +922,25 @@ function submitWorker(event) {
 }
 
 
+document.addEventListener('click', function closeWorkerMenus(event) {
+  if (!event.target.closest('.worker-contact-actions')) {
+    document.querySelectorAll('.worker-contact-item.is-menu-open')
+      .forEach(row => row.classList.remove('is-menu-open'));
+  }
+});
+
 function renderWorkerTable() {
   const tbody = document.getElementById('workerTable');
   const empty = document.getElementById('workerEmpty');
-  const panel = tbody.closest('.table-scroll');
+  if (!tbody || !empty) return;
 
   document.getElementById('workerCount').textContent =
     `${workers.length} pekerja terdaftar`;
 
   empty.style.display = workers.length ? 'none' : 'block';
-  panel.style.display = workers.length ? 'block' : 'none';
+  tbody.style.display = workers.length ? 'block' : 'none';
 
-  panel.innerHTML = `
+  tbody.innerHTML = `
     <div class="worker-contact-list">
       ${workers.map(worker => {
         const initials = worker.name.trim()
@@ -952,8 +959,13 @@ function renderWorkerTable() {
               <span class="worker-contact-arrow">›</span>
             </button>
             <div class="worker-contact-actions">
-              <button class="text-button" data-edit="${worker.id}">Edit</button>
-              <button class="text-button danger" data-delete="${worker.id}">Hapus</button>
+              <button type="button" class="worker-more-btn"
+                aria-label="Menu pekerja" data-menu="${worker.id}">⋮</button>
+              <div class="worker-action-menu">
+                <button type="button" data-edit="${worker.id}">✎ &nbsp; Edit</button>
+                <button type="button" class="delete-action"
+                  data-delete="${worker.id}">⌫ &nbsp; Hapus</button>
+              </div>
             </div>
           </article>
         `;
@@ -961,19 +973,32 @@ function renderWorkerTable() {
     </div>
   `;
 
-  panel.querySelectorAll('[data-profile]').forEach(button => {
+  tbody.querySelectorAll('[data-profile]').forEach(button => {
     button.addEventListener('click', () =>
       renderWorkerProfile(button.dataset.profile)
     );
   });
 
-  panel.querySelectorAll('[data-edit]').forEach(button => {
+  tbody.querySelectorAll('[data-menu]').forEach(button => {
+    button.addEventListener('click', event => {
+      event.stopPropagation();
+      const item = button.closest('.worker-contact-item');
+      const wasOpen = item.classList.contains('is-menu-open');
+
+      tbody.querySelectorAll('.worker-contact-item')
+        .forEach(row => row.classList.remove('is-menu-open'));
+
+      if (!wasOpen) item.classList.add('is-menu-open');
+    });
+  });
+
+  tbody.querySelectorAll('[data-edit]').forEach(button => {
     button.addEventListener('click', () =>
       editWorker(button.dataset.edit)
     );
   });
 
-  panel.querySelectorAll('[data-delete]').forEach(button => {
+  tbody.querySelectorAll('[data-delete]').forEach(button => {
     button.addEventListener('click', () =>
       deleteWorker(button.dataset.delete)
     );
