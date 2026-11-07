@@ -2425,3 +2425,118 @@ td strong {
     padding: 0 12px;
   }
 }
+
+/* COMPACT DASHBOARD MOBILE */
+@media (max-width: 700px) {
+  .content {
+    padding: 12px 10px 85px;
+  }
+
+  .page-heading {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .page-heading h1 {
+    font-size: 20px;
+  }
+
+  .page-heading p {
+    font-size: 10px;
+  }
+
+  .page-heading .primary {
+    width: auto;
+    padding: 10px;
+    font-size: 10px;
+    white-space: nowrap;
+  }
+
+  .metrics {
+    gap: 7px;
+    margin-bottom: 10px;
+  }
+
+  .metric {
+    padding: 10px;
+  }
+
+  .metric strong {
+    font-size: 19px;
+    margin: 5px 0 1px;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    gap: 9px;
+  }
+
+  .side-panels {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .panel-heading {
+    padding: 10px 12px;
+  }
+
+  .panel-heading h2 {
+    font-size: 12px;
+  }
+
+  .panel-heading p {
+    font-size: 9px;
+  }
+
+  th, td {
+    padding: 9px 10px;
+  }
+
+  .finance {
+    padding: 10px;
+  }
+
+  .dashboard-extra {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 9px;
+  }
+
+  .owner-active-work,
+  .owner-shortages {
+    padding: 8px;
+  }
+
+  .owner-work-item,
+  .owner-shortage-item,
+  .owner-wage-row {
+    gap: 5px;
+    padding: 8px 0;
+  }
+
+  .owner-work-item strong,
+  .owner-shortage-item strong {
+    font-size: 10px;
+  }
+
+  .owner-work-item small,
+  .owner-shortage-item small {
+    font-size: 9px;
+  }
+
+  .owner-work-meta b,
+  .owner-shortage-item > div:last-child b {
+    font-size: 10px;
+  }
+
+  .owner-wage-list {
+    padding: 0 9px;
+  }
+
+  .owner-shortage-total strong,
+  .owner-wage-total strong {
+    font-size: 17px;
+  }
+}
