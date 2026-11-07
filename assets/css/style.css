@@ -3056,3 +3056,203 @@ td strong {
   font-size: 11px;
   min-height: 14px;
 }
+
+/* ===== MONITOR PRODUKSI REDESIGN ===== */
+.monitor-redesign {
+  display: grid;
+  gap: 16px;
+}
+
+.monitor-summary {
+  position: relative;
+  overflow: hidden;
+  padding: 22px;
+  border: 1px solid rgba(80, 190, 255, .2);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 90% 5%, rgba(0, 190, 255, .18), transparent 38%),
+    linear-gradient(145deg, #172638, #101923 75%);
+  color: #f4f8ff;
+}
+
+.monitor-kicker {
+  color: #75caff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+}
+
+.monitor-summary h2 {
+  margin: 12px 0 4px;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.monitor-total {
+  display: block;
+  margin-top: 18px;
+  font-size: clamp(38px, 10vw, 54px);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -2px;
+}
+
+.monitor-total small {
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: #75caff;
+}
+
+.monitor-summary p {
+  margin: 8px 0 20px;
+  color: #a9bbcd;
+  font-size: 12px;
+}
+
+.monitor-process-btn {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px 18px;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(100deg, #168ee8, #20b9dc);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+
+.monitor-process-btn span {
+  font-size: 20px;
+}
+
+.monitor-stage-switch {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 0 8px;
+  scrollbar-width: thin;
+}
+
+.monitor-stage-btn {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 13px;
+  border: 1px solid var(--border-color, rgba(130,150,170,.2));
+  border-radius: 10px;
+  background: var(--card-bg, #18212c);
+  color: var(--text-color, #e5edf5);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.monitor-stage-btn strong {
+  color: #55bfff;
+}
+
+.monitor-stage-btn.active {
+  border-color: #219fe8;
+  background: rgba(25, 145, 220, .14);
+}
+
+.monitor-detail {
+  padding: 16px;
+  border: 1px solid var(--border-color, rgba(130,150,170,.2));
+  border-radius: 16px;
+  background: var(--card-bg, #18212c);
+}
+
+.monitor-detail[hidden] {
+  display: none !important;
+}
+
+.monitor-detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 15px;
+}
+
+.monitor-detail-head h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.monitor-detail-head p {
+  margin: 5px 0 0;
+  color: var(--muted-color, #91a0af);
+  font-size: 11px;
+}
+
+.monitor-detail-head button {
+  padding: 8px 12px;
+  border: 1px solid var(--border-color, #344454);
+  border-radius: 9px;
+  background: transparent;
+  color: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.monitor-detail .table-scroll {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.monitor-detail table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.monitor-detail th,
+.monitor-detail td {
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--border-color, rgba(130,150,170,.15));
+  text-align: left;
+  white-space: nowrap;
+}
+
+.monitor-detail th {
+  color: var(--muted-color, #91a0af);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+}
+
+.monitor-detail td small {
+  color: var(--muted-color, #91a0af);
+}
+
+.monitor-detail .text-button {
+  padding: 8px 10px;
+  border: 1px solid rgba(40, 170, 230, .3);
+  border-radius: 8px;
+  background: rgba(25, 145, 220, .12);
+  color: #55bfff;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+@media (max-width: 480px) {
+  .monitor-summary {
+    padding: 18px;
+  }
+
+  .monitor-detail {
+    padding: 12px;
+  }
+
+  .monitor-stage-btn {
+    padding: 9px 11px;
+  }
+}
+/* ===== END MONITOR PRODUKSI ===== */

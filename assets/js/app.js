@@ -248,11 +248,12 @@ content.addEventListener('input', event => {
   updateKalkulator(field);
 });
 
+
 function renderMonitor() {
   mainAction.style.display = 'none';
 
   const stages = [
-    { key: 'monitor', title: 'Monitor Barang', next: 'kam', button: 'Pindah ke Kam' },
+    { key: 'monitor', title: 'Barang Sudah Diobras', next: 'kam', button: 'Pindah ke Kam' },
     { key: 'kam', title: 'Barang di Kam', next: 'jahit', button: 'Pindah ke Jahit' },
     { key: 'jahit', title: 'Barang di Jahit', next: 'gosok', button: 'Pindah ke Gosok' },
     { key: 'gosok', title: 'Barang di Gosok', next: 'packaging', button: 'Pindah ke Packaging' },
@@ -262,113 +263,147 @@ function renderMonitor() {
   ];
 
   const completedJobs = jobs.filter(job => {
-    const reportedDone = Array.isArray(job.workReports) &&
+    const done = Array.isArray(job.workReports) &&
       job.workReports.some(report => report.note === 'Selesai');
 
-    return reportedDone ||
+    return done ||
       Number(job.returned || 0) >= Number(job.quantity || 0);
   });
 
-  const today = new Intl.DateTimeFormat('id-ID', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
-  }).format(new Date());
+  const currentStage = window.monitorCurrentStage || 'monitor';
+  const selected = stages.find(stage => stage.key === currentStage) || stages[0];
 
-  function formatMonitorDate(value) {
+  const stageJobs = completedJobs.filter(job =>
+    (job.monitorStage || 'monitor') === selected.key
+  );
+
+  const total = stageJobs.reduce(
+    (sum, job) => sum + Number(job.quantity || 0), 0
+  );
+
+  const formatDate = job => {
+    const value = job.monitorDates?.[selected.key] ||
+      (selected.key === 'monitor'
+        ? job.depositHistory?.at(-1)?.date ||
+          job.workReports?.at(-1)?.date
+        : null);
+
     if (!value) return '-';
+
     const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? '-' : date.toLocaleDateString('id-ID');
-  }
-
-  function getJobDate(job, stage) {
-    if (job.monitorDates && job.monitorDates[stage]) {
-      return formatMonitorDate(job.monitorDates[stage]);
-    }
-
-    if (stage === 'monitor') {
-      const reports = Array.isArray(job.workReports) ? job.workReports : [];
-      const deposits = Array.isArray(job.depositHistory) ? job.depositHistory : [];
-      const dates = [...reports, ...deposits]
-        .filter(item => item.date)
-        .map(item => new Date(item.date).getTime())
-        .filter(Number.isFinite);
-
-      return dates.length ? formatMonitorDate(Math.max(...dates)) : '-';
-    }
-
-    return '-';
-  }
+    return Number.isNaN(date.getTime())
+      ? '-' : date.toLocaleDateString('id-ID');
+  };
 
   content.innerHTML = `
-    <section class="panel worker-list-panel">
-      <div class="panel-heading">
-        <div>
-          <h2>Monitor Barang</h2>
-          <p>${today}</p>
-          <p>${completedJobs.length} pekerjaan selesai</p>
-        </div>
-        <button class="quick-process-btn" onclick="quickMoveMonitor()">
-          Proses Cepat
+    <section class="monitor-redesign">
+      <article class="monitor-summary">
+        <span class="monitor-kicker">KONVEKSIBOS / MONITOR PRODUKSI</span>
+        <h2>${escapeHTML(selected.title)}</h2>
+        <strong class="monitor-total">
+          ${total.toLocaleString('id-ID')}
+          <small>PCS</small>
+        </strong>
+        <p>Total keseluruhan barang</p>
+        <button type="button" class="monitor-process-btn"
+          id="monitorProcessBtn">
+          PROSES <span>→</span>
         </button>
+      </article>
+
+      <div class="monitor-stage-switch">
+        ${stages.map(stage => {
+          const count = completedJobs.filter(job =>
+            (job.monitorStage || 'monitor') === stage.key
+          ).length;
+
+          return `
+            <button type="button"
+              class="monitor-stage-btn ${stage.key === selected.key ? 'active' : ''}"
+              data-monitor-stage="${stage.key}">
+              <span>${escapeHTML(stage.title)}</span>
+              <strong>${count}</strong>
+            </button>
+          `;
+        }).join('')}
       </div>
 
-      ${stages.map(stage => {
-        const stageJobs = completedJobs.filter(job =>
-          (job.monitorStage || 'monitor') === stage.key
-        );
-
-        return `
-          <div class="panel-heading" style="margin-top:24px">
-            <div>
-              <h2>${stage.title}</h2>
-              <p>${stageJobs.length} barang</p>
-            </div>
+      <section id="monitorDetail" class="monitor-detail" hidden>
+        <div class="monitor-detail-head">
+          <div>
+            <h3>Detail Barang</h3>
+            <p>${stageJobs.length} pekerjaan · ${total.toLocaleString('id-ID')} pcs</p>
           </div>
+          <button type="button" id="monitorCloseDetail">Tutup</button>
+        </div>
 
-          <div class="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>Pekerja</th>
-                  <th>Barang</th>
-                  <th>Jumlah</th>
-                  <th>Tanggal</th>
-                  <th>Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${stageJobs.map(job => {
-                  const worker = workers.find(w => w.id === job.workerId);
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Pekerja</th>
+                <th>Barang</th>
+                <th>Jumlah</th>
+                <th>Tanggal</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${stageJobs.map(job => {
+                const worker = workers.find(w => w.id === job.workerId);
 
-                  return `
-                    <tr>
-                      <td><strong>${escapeHTML(worker?.name || 'Pekerja tidak ditemukan')}</strong></td>
-                      <td>${escapeHTML(job.product || '-')}<br><small>${escapeHTML(job.type || '-')}</small></td>
-                      <td><strong>${Number(job.quantity || 0)} pcs</strong></td>
-                      <td>${getJobDate(job, stage.key)}</td>
-                      <td>
-                        ${stage.next ? `
-                          <button class="text-button"
-                            onclick="moveMonitorStage('${job.id}', '${stage.next}')">
-                            ${stage.button}
-                          </button>
-                        ` : '<span class="status-badge">Terkirim</span>'}
-                      </td>
-                    </tr>
-                  `;
-                }).join('')}
-                ${stageJobs.length ? '' : `
-                  <tr><td colspan="5">Belum ada barang.</td></tr>
-                `}
-              </tbody>
-            </table>
-          </div>
-        `;
-      }).join('')}
+                return `
+                  <tr>
+                    <td><strong>${escapeHTML(worker?.name || 'Pekerja tidak ditemukan')}</strong></td>
+                    <td>${escapeHTML(job.product || '-')}<br>
+                      <small>${escapeHTML(job.type || '-')}</small>
+                    </td>
+                    <td><strong>${Number(job.quantity || 0)} pcs</strong></td>
+                    <td>${formatDate(job)}</td>
+                    <td>
+                      ${selected.next
+                        ? `<button type="button" class="text-button"
+                            data-monitor-move="${escapeHTML(String(job.id))}"
+                            data-monitor-next="${selected.next}">
+                            ${selected.button}
+                          </button>`
+                        : '<span class="status-badge">Terkirim</span>'}
+                    </td>
+                  </tr>
+                `;
+              }).join('') || '<tr><td colspan="5">Belum ada barang.</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </section>
   `;
+
+  content.querySelectorAll('[data-monitor-stage]').forEach(button => {
+    button.addEventListener('click', () => {
+      window.monitorCurrentStage = button.dataset.monitorStage;
+      renderMonitor();
+    });
+  });
+
+  document.getElementById('monitorProcessBtn')
+    ?.addEventListener('click', () => {
+      document.getElementById('monitorDetail').hidden = false;
+    });
+
+  document.getElementById('monitorCloseDetail')
+    ?.addEventListener('click', () => {
+      document.getElementById('monitorDetail').hidden = true;
+    });
+
+  content.querySelectorAll('[data-monitor-move]').forEach(button => {
+    button.addEventListener('click', () => {
+      moveMonitorStage(
+        button.dataset.monitorMove,
+        button.dataset.monitorNext
+      );
+    });
+  });
 }
 
 function moveMonitorStage(jobId, nextStage) {
