@@ -799,18 +799,7 @@ function renderWorkers() {
       </div>
 
       <div class="table-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>Nama</th>
-              <th>Bidang</th>
-              <th>Nomor HP</th>
-              <th>Status</th>
-              <th>Aksi</th>
-            </tr>
-          </thead>
-          <tbody id="workerTable"></tbody>
-        </table>
+        <div id="workerTable"></div>
       </div>
       <div id="workerEmpty" class="empty-state">
         <strong>Belum ada pekerja</strong>
@@ -932,48 +921,62 @@ function submitWorker(event) {
   renderWorkerTable();
 }
 
+
 function renderWorkerTable() {
   const tbody = document.getElementById('workerTable');
   const empty = document.getElementById('workerEmpty');
+  const panel = tbody.closest('.table-scroll');
 
   document.getElementById('workerCount').textContent =
     `${workers.length} pekerja terdaftar`;
 
   empty.style.display = workers.length ? 'none' : 'block';
+  panel.style.display = workers.length ? 'block' : 'none';
 
-  tbody.innerHTML = workers.map(worker => `
-    <tr>
-      <td>
-        <button class="text-button" data-profile="${worker.id}">
-          <strong>${escapeHTML(worker.name)}</strong>
-        </button>
-      </td>
-      <td>${escapeHTML(worker.role)}</td>
-      <td>${escapeHTML(worker.phone || '-')}</td>
-      <td>
-        <span class="status ${worker.status === 'Aktif' ? 'done' : 'waiting'}">
-          ${worker.status}
-        </span>
-      </td>
-      <td>
-        <div class="worker-actions">
-          <button class="text-button" data-edit="${worker.id}">Edit</button>
-          <button class="text-button danger" data-delete="${worker.id}">Hapus</button>
-        </div>
-      </td>
-    </tr>
-  `).join('');
+  panel.innerHTML = `
+    <div class="worker-contact-list">
+      ${workers.map(worker => {
+        const initials = worker.name.trim()
+          .split(/\s+/).slice(0, 2)
+          .map(word => word[0].toUpperCase()).join('');
 
-  tbody.querySelectorAll('[data-profile]').forEach(button => {
-    button.addEventListener('click', () => renderWorkerProfile(button.dataset.profile));
+        return `
+          <article class="worker-contact-item">
+            <button type="button" class="worker-contact-profile"
+              data-profile="${worker.id}">
+              <span class="worker-contact-avatar">${escapeHTML(initials)}</span>
+              <span class="worker-contact-info">
+                <strong>${escapeHTML(worker.name)}</strong>
+                <small>${escapeHTML(worker.role)} · ${escapeHTML(worker.status)}</small>
+              </span>
+              <span class="worker-contact-arrow">›</span>
+            </button>
+            <div class="worker-contact-actions">
+              <button class="text-button" data-edit="${worker.id}">Edit</button>
+              <button class="text-button danger" data-delete="${worker.id}">Hapus</button>
+            </div>
+          </article>
+        `;
+      }).join('')}
+    </div>
+  `;
+
+  panel.querySelectorAll('[data-profile]').forEach(button => {
+    button.addEventListener('click', () =>
+      renderWorkerProfile(button.dataset.profile)
+    );
   });
 
-  tbody.querySelectorAll('[data-edit]').forEach(button => {
-    button.addEventListener('click', () => editWorker(button.dataset.edit));
+  panel.querySelectorAll('[data-edit]').forEach(button => {
+    button.addEventListener('click', () =>
+      editWorker(button.dataset.edit)
+    );
   });
 
-  tbody.querySelectorAll('[data-delete]').forEach(button => {
-    button.addEventListener('click', () => deleteWorker(button.dataset.delete));
+  panel.querySelectorAll('[data-delete]').forEach(button => {
+    button.addEventListener('click', () =>
+      deleteWorker(button.dataset.delete)
+    );
   });
 }
 
