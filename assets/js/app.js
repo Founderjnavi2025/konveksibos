@@ -1295,22 +1295,8 @@ function renderJobs() {
         <button type="button" data-job-filter="Selesai">Selesai</button>
       </div>
 
-      <div class="table-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>Pekerja</th>
-              <th>Barang</th>
-              <th>Jumlah</th>
-              <th>Disetor</th>
-              <th>Sisa</th>
-              <th>Upah</th>
-              <th>Status</th>
-              <th>Aksi</th>
-            </tr>
-          </thead>
-          <tbody id="jobTable"></tbody>
-        </table>
+      <div class="table-scroll job-contact-scroll">
+        <div id="jobTable"></div>
       </div>
 
       <div id="jobEmpty" class="empty-state">
@@ -1583,6 +1569,7 @@ function calculateJobPay(job) {
     : completed * job.rate;
 }
 
+
 function renderJobTable() {
   const tbody = document.getElementById('jobTable');
   if (!tbody) return;
@@ -1608,12 +1595,14 @@ function renderJobTable() {
 
   const empty = document.getElementById('jobEmpty');
   empty.style.display = selectedJobs.length ? 'none' : 'block';
+
   empty.innerHTML = selectedJobs.length ? '' :
     `<strong>${currentJobTab === 'Aktif'
-      ? 'Tidak ada pekerjaan aktif' : 'Belum ada pekerjaan selesai'}</strong>
+      ? 'Tidak ada pekerjaan aktif'
+      : 'Belum ada pekerjaan selesai'}</strong>
      <p>${currentJobTab === 'Aktif'
-      ? 'Semua pekerjaan sudah disetor.' :
-      'Pekerjaan yang selesai akan muncul di sini.'}</p>`;
+      ? 'Semua pekerjaan sudah disetor.'
+      : 'Pekerjaan yang selesai akan muncul di sini.'}</p>`;
 
   document.querySelectorAll('[data-job-filter]').forEach(button => {
     const tab = button.dataset.jobFilter;
@@ -1630,78 +1619,192 @@ function renderJobTable() {
 
   tbody.innerHTML = selectedJobs.map(job => {
     const worker = workers.find(w => w.id === job.workerId);
+    const name = worker?.name || 'Pekerja tidak ditemukan';
+    const initials = name.split(/\s+/)
+      .map(part => part[0] || '')
+      .slice(0, 2).join('').toUpperCase();
+
     const returned = Number(job.returned || 0);
     const remaining = Math.max(0, Number(job.quantity) - returned);
-    const reportedDone = Array.isArray(job.workReports) &&
-      job.workReports.some(item => item.note === 'Selesai');
 
-    const status = reportedDone || remaining === 0 ? 'Selesai'
+    const status = isReportedComplete(job) || remaining === 0
+      ? 'Selesai'
       : returned > 0 ? 'Sebagian setor' : 'Belum setor';
 
-    const history = Array.isArray(job.depositHistory)
-      ? job.depositHistory : [];
-
-    const historyTotal = history.reduce(
-      (sum, item) => sum + Number(item.quantity || 0), 0
-    );
-
-    const legacyQuantity = Math.max(0, returned - historyTotal);
-
-    const workReports = Array.isArray(job.workReports)
-      ? job.workReports : [];
-
-    const historyHTML = [
-      ...workReports.map(item => {
-        const date = item.date
-          ? new Date(item.date).toLocaleString('id-ID')
-          : 'Tanggal tidak tersedia';
-
-        return `<li><strong>Laporan kerja: ${Number(item.quantity)} pcs</strong>
-          — ${escapeHTML(item.note || 'Tanpa keterangan')}
-          <br><small>${escapeHTML(date)}</small></li>`;
-      }),
-      ...(legacyQuantity > 0
-        ? [`<li>${legacyQuantity} pcs — Setoran lama (detail belum tercatat)</li>`]
-        : []),
-      ...history.map(item => {
-        const date = item.date
-          ? new Date(item.date).toLocaleString('id-ID')
-          : 'Tanggal tidak tersedia';
-
-        return `<li><strong>Setoran fisik: ${Number(item.quantity)} pcs</strong>
-          <br><small>${escapeHTML(date)}</small></li>`;
-      })
-    ].join('');
-
     return `
-      <tr>
-        <td><strong>${escapeHTML(worker?.name || 'Pekerja tidak ditemukan')}</strong></td>
-        <td>${escapeHTML(job.product)}<br><small>${escapeHTML(job.type)}</small></td>
-        <td>${job.quantity} pcs</td>
-        <td>${returned} pcs</td>
-        <td>${remaining} pcs</td>
-        <td>Rp ${Math.round(calculateJobPay(job)).toLocaleString('id-ID')}</td>
-        <td><span class="status ${reportedDone || remaining === 0 ? 'done' : 'progress'}">${status}</span></td>
-        <td>
-          ${remaining > 0
-            ? `<button class="text-button" data-deposit="${job.id}">Catat setor</button>`
-            : ''}
-          <details class="job-history">
-            <summary>Riwayat</summary>
-            ${historyHTML
-              ? `<ul>${historyHTML}</ul>`
-              : '<small>Belum ada riwayat laporan atau setoran.</small>'}
-          </details>
-        </td>
-      </tr>
+      <button type="button" class="job-contact-item"
+        data-job-card="${escapeHTML(String(job.id))}">
+        <span class="job-contact-avatar">${escapeHTML(initials)}</span>
+
+        <span class="job-contact-info">
+          <strong>${escapeHTML(name)}</strong>
+          <small>${escapeHTML(job.product)} · ${escapeHTML(job.type)}</small>
+        </span>
+
+        <span class="job-contact-meta">
+          <strong>${Number(job.quantity)} pcs</strong>
+          <small>${escapeHTML(status)}</small>
+        </span>
+
+        <span class="job-contact-arrow">›</span>
+      </button>
     `;
   }).join('');
 
-  tbody.querySelectorAll('[data-deposit]').forEach(button => {
+  tbody.querySelectorAll('[data-job-card]').forEach(button => {
     button.addEventListener('click', () =>
-      recordDeposit(button.dataset.deposit)
+      renderJobCard(button.dataset.jobCard)
     );
   });
+}
+
+
+
+function renderJobCard(id) {
+  const job = jobs.find(item => item.id === id);
+  if (!job) return;
+
+  const worker = workers.find(w => w.id === job.workerId);
+  const returned = Number(job.returned || 0);
+  const remaining = Math.max(0, Number(job.quantity) - returned);
+
+  const reportedDone = Array.isArray(job.workReports) &&
+    job.workReports.some(item => item.note === 'Selesai');
+
+  const status = reportedDone || remaining === 0
+    ? 'Selesai'
+    : returned > 0 ? 'Sebagian setor' : 'Belum setor';
+
+  const history = Array.isArray(job.depositHistory)
+    ? job.depositHistory : [];
+
+  const historyTotal = history.reduce(
+    (sum, item) => sum + Number(item.quantity || 0), 0
+  );
+
+  const legacyQuantity = Math.max(0, returned - historyTotal);
+
+  const workReports = Array.isArray(job.workReports)
+    ? job.workReports : [];
+
+  const historyHTML = [
+    ...workReports.map(item => {
+      const date = item.date
+        ? new Date(item.date).toLocaleString('id-ID')
+        : 'Tanggal tidak tersedia';
+
+      return `<li>
+        <strong>Laporan kerja: ${Number(item.quantity)} pcs</strong>
+        — ${escapeHTML(item.note || 'Tanpa keterangan')}
+        <br><small>${escapeHTML(date)}</small>
+      </li>`;
+    }),
+
+    ...(legacyQuantity > 0
+      ? [`<li>${legacyQuantity} pcs — Setoran lama (detail belum tercatat)</li>`]
+      : []),
+
+    ...history.map(item => {
+      const date = item.date
+        ? new Date(item.date).toLocaleString('id-ID')
+        : 'Tanggal tidak tersedia';
+
+      return `<li>
+        <strong>Setoran fisik: ${Number(item.quantity)} pcs</strong>
+        <br><small>${escapeHTML(date)}</small>
+      </li>`;
+    })
+  ].join('');
+
+  const workerName = worker?.name || 'Pekerja tidak ditemukan';
+
+  mainAction.style.display = 'none';
+
+  content.innerHTML = `
+    <section class="job-card-page">
+
+      <button type="button" class="job-card-back" id="backToJobList">
+        <span>‹</span> Kembali ke daftar pekerjaan
+      </button>
+
+      <article class="job-detail-card">
+
+        <div class="job-detail-heading">
+          <div class="job-contact-avatar">
+            ${escapeHTML(workerName.split(/\s+/)
+              .map(part => part[0] || '')
+              .slice(0, 2).join('').toUpperCase())}
+          </div>
+
+          <div>
+            <small>DETAIL PEKERJAAN</small>
+            <h2>${escapeHTML(workerName)}</h2>
+            <p>${escapeHTML(job.product)} · ${escapeHTML(job.type)}</p>
+          </div>
+        </div>
+
+        <div class="job-detail-grid">
+          <div class="job-detail-field">
+            <small>Pekerja</small>
+            <strong>${escapeHTML(workerName)}</strong>
+          </div>
+
+          <div class="job-detail-field">
+            <small>Barang</small>
+            <strong>${escapeHTML(job.product)}</strong>
+          </div>
+
+          <div class="job-detail-field">
+            <small>Jumlah</small>
+            <strong>${Number(job.quantity)} pcs</strong>
+          </div>
+
+          <div class="job-detail-field">
+            <small>Disetor</small>
+            <strong>${returned} pcs</strong>
+          </div>
+
+          <div class="job-detail-field">
+            <small>Sisa</small>
+            <strong>${remaining} pcs</strong>
+          </div>
+
+          <div class="job-detail-field">
+            <small>Upah</small>
+            <strong>Rp ${Math.round(calculateJobPay(job))
+              .toLocaleString('id-ID')}</strong>
+          </div>
+        </div>
+
+        <div class="job-detail-status">
+          <span>Status pekerjaan</span>
+          <strong class="status ${reportedDone || remaining === 0
+            ? 'done' : 'progress'}">${escapeHTML(status)}</strong>
+        </div>
+
+        <div class="job-detail-actions">
+          ${remaining > 0
+            ? `<button type="button" class="primary"
+                id="jobCardDeposit">Catat setor</button>`
+            : ''}
+        </div>
+
+        <details class="job-detail-history">
+          <summary>Riwayat pekerjaan</summary>
+          ${historyHTML
+            ? `<ul>${historyHTML}</ul>`
+            : '<small>Belum ada riwayat laporan atau setoran.</small>'}
+        </details>
+
+      </article>
+    </section>
+  `;
+
+  document.getElementById('backToJobList')
+    ?.addEventListener('click', renderJobs);
+
+  document.getElementById('jobCardDeposit')
+    ?.addEventListener('click', () => recordDeposit(id));
 }
 
 function recordDeposit(id) {
@@ -1735,7 +1838,12 @@ function recordDeposit(id) {
   });
 
   saveJobs();
-  renderJobTable();
+
+  if (document.getElementById('jobCardDeposit')) {
+    renderJobCard(id);
+  } else {
+    renderJobTable();
+  }
 }
 
 function openJobForm() {

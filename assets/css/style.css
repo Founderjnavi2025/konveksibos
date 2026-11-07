@@ -2786,3 +2786,241 @@ td strong {
     padding: 11px 4px;
   }
 }
+
+/* JOB CONTACT LIST */
+.job-contact-scroll {
+  overflow: visible;
+}
+
+#jobTable {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.job-contact-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px;
+  border: 1px solid var(--border,rgba(255,255,255,.09));
+  border-radius: 15px;
+  background: var(--card,rgba(255,255,255,.035));
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: .2s ease;
+}
+
+.job-contact-item:active {
+  transform: scale(.985);
+}
+
+.job-contact-avatar {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(145deg,#2563eb,#7c3aed);
+  color: white;
+  font-weight: 800;
+}
+
+.job-contact-info {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.job-contact-info strong {
+  font-size: 14px;
+}
+
+.job-contact-info small {
+  color: var(--muted,#999);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.job-contact-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+}
+
+.job-contact-meta strong {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.job-contact-meta small {
+  color: var(--muted,#999);
+  font-size: 10px;
+}
+
+.job-contact-arrow {
+  color: var(--muted,#999);
+  font-size: 23px;
+}
+
+/* JOB DETAIL */
+.job-card-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 25px;
+}
+
+.job-card-back {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 13px;
+  border: 1px solid var(--border,rgba(255,255,255,.1));
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.job-card-back span {
+  font-size: 22px;
+}
+
+.job-detail-card {
+  padding: 18px;
+  border: 1px solid var(--border,rgba(255,255,255,.1));
+  border-radius: 20px;
+  background: var(--card,rgba(255,255,255,.035));
+}
+
+.job-detail-heading {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border,rgba(255,255,255,.1));
+}
+
+.job-detail-heading > div:last-child {
+  min-width: 0;
+}
+
+.job-detail-heading small {
+  color: var(--muted,#999);
+  font-size: 9px;
+  letter-spacing: 1.2px;
+}
+
+.job-detail-heading h2 {
+  margin: 4px 0;
+  font-size: 19px;
+}
+
+.job-detail-heading p {
+  margin: 0;
+  color: var(--muted,#999);
+  font-size: 12px;
+}
+
+.job-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 10px;
+  padding: 20px 0;
+}
+
+.job-detail-field {
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid var(--border,rgba(255,255,255,.08));
+  border-radius: 13px;
+  background: rgba(255,255,255,.025);
+}
+
+.job-detail-field > small {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--muted,#999);
+  font-size: 10px;
+}
+
+.job-detail-field > strong {
+  display: block;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.job-detail-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 0;
+  border-top: 1px solid var(--border,rgba(255,255,255,.1));
+  font-size: 12px;
+}
+
+.job-detail-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.job-detail-actions button {
+  width: 100%;
+  min-height: 45px;
+  border-radius: 12px;
+}
+
+.job-detail-history {
+  margin-top: 15px;
+  padding: 14px;
+  border: 1px solid var(--border,rgba(255,255,255,.1));
+  border-radius: 13px;
+}
+
+.job-detail-history summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.job-detail-history ul {
+  padding-left: 18px;
+  margin-bottom: 0;
+}
+
+.job-detail-history li {
+  margin-top: 12px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.job-detail-history li small {
+  color: var(--muted,#999);
+}
+
+@media(max-width:420px) {
+  .job-detail-card {
+    padding: 14px;
+  }
+
+  .job-detail-grid {
+    gap: 8px;
+  }
+
+  .job-detail-field {
+    padding: 11px;
+  }
+}
