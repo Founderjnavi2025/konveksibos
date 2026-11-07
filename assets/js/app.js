@@ -15,7 +15,8 @@ const descriptions = {
   Monitor: 'Pantau barang keluar, proses, dan barang masuk.',
   Payroll: 'Kelola perhitungan upah dan pembayaran pekerja.',
   Keuangan: 'Pantau pemasukan dan pengeluaran bisnis.',
-  Laporan: 'Lihat ringkasan dan riwayat aktivitas bisnis.'
+  Laporan: 'Lihat ringkasan dan riwayat aktivitas bisnis.',
+  Kalkulator: 'Hitung konversi PCS, lusin, dan total harga.'
 };
 
 let workers = JSON.parse(localStorage.getItem('kb_workers') || '[]');
@@ -35,7 +36,7 @@ function setActiveMenu(page) {
     button.classList.toggle('active', button.dataset.page === page);
   });
 
-  const morePages = ['Kekurangan', 'Payroll', 'Keuangan', 'Laporan'];
+  const morePages = ['Kekurangan', 'Payroll', 'Keuangan', 'Laporan', 'Kalkulator'];
   document.getElementById('moreMenuToggle')
     ?.classList.toggle('active', morePages.includes(page));
 }
@@ -67,6 +68,8 @@ function navigate(page) {
     renderLaporan();
   } else if (page === 'Kekurangan') {
     renderKekurangan();
+  } else if (page === 'Kalkulator') {
+    renderKalkulator();
   } else {
     content.innerHTML = `
       <section class="panel">
@@ -80,6 +83,170 @@ function navigate(page) {
 
 
 
+
+
+function renderKalkulator() {
+  mainAction.style.display = 'none';
+
+  content.innerHTML = `
+    <section class="calc-layout">
+      <div class="calc-intro">
+        <span class="calc-eyebrow">TOOLS PRODUKSI</span>
+        <h2>Kalkulator Lusin</h2>
+        <p>Konversi jumlah barang dan hitung nilai pekerjaan dengan cepat.</p>
+      </div>
+
+      <div class="calc-panel">
+        <div class="calc-section-title">
+          <div>
+            <span class="calc-number">01</span>
+            <h3>Jumlah Barang</h3>
+          </div>
+          <span class="calc-hint">Konversi otomatis</span>
+        </div>
+
+        <div class="calc-fields">
+          <label class="calc-field">
+            <span>Jumlah PCS</span>
+            <div class="calc-input-wrap">
+              <input class="calc-input" data-calc-field="pcs"
+                type="text" inputmode="decimal" placeholder="Contoh: 151">
+              <b>PCS</b>
+            </div>
+          </label>
+
+          <div class="calc-convert-icon">⇄</div>
+
+          <label class="calc-field">
+            <span>Jumlah Lusin</span>
+            <div class="calc-input-wrap">
+              <input class="calc-input" data-calc-field="dozen"
+                type="text" inputmode="decimal" placeholder="Contoh: 12,7">
+              <b>LUSIN</b>
+            </div>
+          </label>
+        </div>
+
+        <p class="calc-note">Format lusin,sisa PCS. Contoh: 12,7 = 12 lusin + 7 PCS.</p>
+      </div>
+
+      <div class="calc-panel">
+        <div class="calc-section-title">
+          <div>
+            <span class="calc-number">02</span>
+            <h3>Perhitungan Harga</h3>
+          </div>
+        </div>
+
+        <label class="calc-field calc-price-field">
+          <span>Harga per Lusin (Rp)</span>
+          <div class="calc-input-wrap">
+            <b>Rp</b>
+            <input class="calc-input" data-calc-field="price"
+              type="text" inputmode="decimal" placeholder="Contoh: 8.000">
+          </div>
+        </label>
+
+        <div class="calc-result">
+          <span>ESTIMASI TOTAL HARGA</span>
+          <strong id="calcTotal">Rp0</strong>
+          <small id="calcBreakdown">0 lusin × Rp0</small>
+        </div>
+
+        <button type="button" class="calc-reset"
+          onclick="resetKalkulator()">Reset Kalkulator</button>
+      </div>
+
+      <div class="calc-disclaimer">
+        <span>ⓘ</span>
+        Kalkulator mandiri. Hasil perhitungan tidak otomatis masuk ke Payroll atau transaksi keuangan.
+      </div>
+    </section>
+  `;
+}
+
+function parseCalcPcs(value) {
+  const number = parseInt(String(value || '').trim(), 10);
+  return Number.isFinite(number) && number >= 0 ? number : 0;
+}
+
+function parseCalcDozen(value) {
+  const match = String(value || '').trim().match(/^(\d+)(?:,(\d*))?$/);
+  if (!match) return 0;
+
+  const dozen = Number(match[1]);
+  const remainder = Number(match[2] || 0);
+
+  return (dozen * 12) + remainder;
+}
+
+function formatCalcDozen(pcs) {
+  const dozen = Math.floor(pcs / 12);
+  const remainder = pcs % 12;
+
+  return remainder ? `${dozen},${remainder}` : String(dozen);
+}
+
+function parseCalcPrice(value) {
+  const digits = String(value || '').replace(/[^0-9]/g, '');
+  return digits ? Number(digits) : 0;
+}
+
+function updateKalkulator(source) {
+  const pcsInput = content.querySelector('[data-calc-field="pcs"]');
+  const dozenInput = content.querySelector('[data-calc-field="dozen"]');
+  const priceInput = content.querySelector('[data-calc-field="price"]');
+
+  if (!pcsInput || !dozenInput || !priceInput) return;
+
+  if (source === 'pcs') {
+    const value = pcsInput.value.trim();
+    dozenInput.value = value
+      ? formatCalcDozen(parseCalcPcs(value))
+      : '';
+  }
+
+  if (source === 'dozen') {
+    const value = dozenInput.value.trim();
+    pcsInput.value = value
+      ? String(parseCalcDozen(value))
+      : '';
+  }
+
+  const pcs = parseCalcPcs(pcsInput.value);
+  const dozen = pcs / 12;
+  const price = parseCalcPrice(priceInput.value);
+  const total = dozen * price;
+
+  const totalElement = document.getElementById('calcTotal');
+  const breakdown = document.getElementById('calcBreakdown');
+
+  if (totalElement) {
+    totalElement.textContent = new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      maximumFractionDigits: 0
+    }).format(total);
+  }
+
+  if (breakdown) {
+    breakdown.textContent =
+      `${pcs} PCS ÷ 12 × Rp${price.toLocaleString('id-ID')}`;
+  }
+}
+
+function resetKalkulator() {
+  content.querySelectorAll('[data-calc-field]').forEach(input => {
+    input.value = '';
+  });
+  updateKalkulator();
+}
+
+content.addEventListener('input', event => {
+  const field = event.target.dataset.calcField;
+  if (!field) return;
+  updateKalkulator(field);
+});
 
 function renderMonitor() {
   mainAction.style.display = 'none';
