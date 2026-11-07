@@ -3256,3 +3256,183 @@ td strong {
   }
 }
 /* ===== END MONITOR PRODUKSI ===== */
+
+/* ===== MONITOR MOBILE FIRST ===== */
+@media (max-width: 600px) {
+  .monitor-redesign {
+    width: 100%;
+    min-width: 0;
+    gap: 13px;
+  }
+
+  .monitor-summary {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 19px;
+    border-radius: 18px;
+  }
+
+  .monitor-summary h2 {
+    font-size: 18px;
+    line-height: 1.3;
+  }
+
+  .monitor-total {
+    font-size: 46px;
+    margin-top: 20px;
+  }
+
+  .monitor-process-btn {
+    min-height: 48px;
+    box-sizing: border-box;
+  }
+
+  .monitor-stage-switch {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    overflow: visible;
+  }
+
+  .monitor-stage-btn {
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+    justify-content: space-between;
+    gap: 5px;
+    padding: 11px 9px;
+    white-space: normal;
+    text-align: left;
+    font-size: 10px;
+  }
+
+  .monitor-stage-btn span {
+    min-width: 0;
+    line-height: 1.35;
+  }
+
+  .monitor-stage-btn strong {
+    flex-shrink: 0;
+    font-size: 12px;
+  }
+
+  .monitor-detail {
+    min-width: 0;
+    padding: 13px;
+    border-radius: 15px;
+    box-sizing: border-box;
+  }
+
+  .monitor-detail-head {
+    align-items: center;
+  }
+
+  .monitor-detail-head h3 {
+    font-size: 15px;
+  }
+
+  .monitor-detail .table-scroll {
+    overflow: visible;
+  }
+
+  .monitor-detail table,
+  .monitor-detail tbody {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .monitor-detail thead {
+    display: none;
+  }
+
+  .monitor-detail tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 12px;
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 11px;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color, rgba(130,150,170,.2));
+    border-radius: 13px;
+    background: var(--card-bg, #18212c);
+  }
+
+  .monitor-detail tbody td {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    padding: 10px 0;
+    border: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    font-size: 12px;
+  }
+
+  .monitor-detail tbody td:nth-child(1) {
+    grid-column: 1 / -1;
+    border-bottom: 1px solid var(--border-color, rgba(130,150,170,.2));
+    font-size: 14px;
+    font-weight: 800;
+  }
+
+  .monitor-detail tbody td:nth-child(2) {
+    grid-column: 1;
+  }
+
+  .monitor-detail tbody td:nth-child(3) {
+    grid-column: 2;
+  }
+
+  .monitor-detail tbody td:nth-child(4) {
+    grid-column: 1;
+  }
+
+  .monitor-detail tbody td:nth-child(5) {
+    grid-column: 1 / -1;
+    padding-top: 8px;
+  }
+
+  .monitor-detail tbody td:nth-child(1)::before {
+    content: "PEKERJA";
+  }
+
+  .monitor-detail tbody td:nth-child(2)::before {
+    content: "BARANG";
+  }
+
+  .monitor-detail tbody td:nth-child(3)::before {
+    content: "JUMLAH";
+  }
+
+  .monitor-detail tbody td:nth-child(4)::before {
+    content: "TANGGAL";
+  }
+
+  .monitor-detail tbody td:nth-child(5)::before {
+    content: "AKSI";
+  }
+
+  .monitor-detail tbody td::before {
+    color: var(--muted-color, #91a0af);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .8px;
+  }
+
+  .monitor-detail .text-button {
+    width: 100%;
+    min-height: 42px;
+    box-sizing: border-box;
+    font-size: 12px;
+  }
+
+  .monitor-detail tbody td[colspan="5"] {
+    grid-column: 1 / -1;
+    text-align: center;
+  }
+}
+/* ===== END MONITOR MOBILE ===== */
