@@ -3024,3 +3024,35 @@ td strong {
     padding: 11px;
   }
 }
+
+/* PREMIUM DEPOSIT MODAL */
+.deposit-modal .deposit-info {
+  padding: 18px;
+  border: 1px solid rgba(56,189,248,.25);
+  border-radius: 14px;
+  background: rgba(37,99,235,.09);
+}
+
+.deposit-info small {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+
+.deposit-info strong {
+  display: block;
+  margin-top: 9px;
+  font-size: 27px;
+  color: #38bdf8;
+}
+
+.deposit-info strong span {
+  font-size: 12px;
+}
+
+.deposit-error {
+  color: #ef4444;
+  font-size: 11px;
+  min-height: 14px;
+}

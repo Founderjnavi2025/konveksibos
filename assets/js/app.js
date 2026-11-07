@@ -1807,43 +1807,117 @@ function renderJobCard(id) {
     ?.addEventListener('click', () => recordDeposit(id));
 }
 
+
 function recordDeposit(id) {
   const job = jobs.find(j => j.id === id);
   if (!job) return;
 
-  const remaining = Number(job.quantity) - Number(job.returned || 0);
-  const input = prompt(
-    `Sisa barang ${remaining} pcs. Masukkan jumlah setoran:`
+  document.getElementById('depositModal')?.remove();
+
+  const remaining = Math.max(
+    0,
+    Number(job.quantity) - Number(job.returned || 0)
   );
 
-  if (input === null || input.trim() === '') return;
+  if (remaining <= 0) return;
 
-  const quantity = Number(input);
+  const modal = document.createElement('div');
+  modal.id = 'depositModal';
+  modal.className = 'worker-modal-overlay';
 
-  if (!Number.isInteger(quantity) || quantity <= 0 || quantity > remaining) {
-    alert('Jumlah setoran tidak valid. Periksa kembali jumlah barang.');
-    return;
-  }
+  modal.innerHTML = `
+    <section class="worker-modal deposit-modal">
+      <div class="worker-modal-head">
+        <div>
+          <span class="quick-modal-kicker">KONVEKSIBOS / SETORAN</span>
+          <h2>Catat setoran</h2>
+          <p>Masukkan jumlah barang yang dikembalikan</p>
+        </div>
+        <button type="button" class="quick-close"
+          id="closeDepositModal">×</button>
+      </div>
 
-  if (!Array.isArray(job.depositHistory)) {
-    job.depositHistory = [];
-  }
+      <form id="depositForm" class="worker-form">
+        <div class="deposit-info">
+          <small>SISA BARANG BELUM DISETOR</small>
+          <strong>${remaining.toLocaleString('id-ID')} <span>PCS</span></strong>
+        </div>
 
-  job.returned = Number(job.returned || 0) + quantity;
+        <label>
+          Jumlah setoran (pcs)
+          <input id="depositQuantity" type="number"
+            min="1" max="${remaining}" step="1"
+            required inputmode="numeric"
+            placeholder="Masukkan jumlah pcs">
+        </label>
 
-  job.depositHistory.push({
-    id: crypto.randomUUID(),
-    quantity,
-    date: new Date().toISOString()
+        <small id="depositError" class="deposit-error"></small>
+
+        <div class="worker-form-actions">
+          <button class="primary" type="submit">
+            Simpan setoran
+          </button>
+          <button class="secondary" type="button"
+            id="cancelDepositModal">Batal</button>
+        </div>
+      </form>
+    </section>
+  `;
+
+  document.body.appendChild(modal);
+
+  const close = () => modal.remove();
+
+  document.getElementById('closeDepositModal')
+    .addEventListener('click', close);
+
+  document.getElementById('cancelDepositModal')
+    .addEventListener('click', close);
+
+  modal.addEventListener('click', event => {
+    if (event.target === modal) close();
   });
 
-  saveJobs();
+  const input = document.getElementById('depositQuantity');
+  const error = document.getElementById('depositError');
 
-  if (document.getElementById('jobCardDeposit')) {
-    renderJobCard(id);
-  } else {
-    renderJobTable();
-  }
+  input.focus();
+
+  document.getElementById('depositForm')
+    .addEventListener('submit', event => {
+      event.preventDefault();
+
+      const quantity = Number(input.value);
+
+      if (!Number.isInteger(quantity) ||
+          quantity <= 0 || quantity > remaining) {
+        error.textContent =
+          `Masukkan jumlah antara 1 sampai ${remaining} pcs.`;
+        input.focus();
+        return;
+      }
+
+      if (!Array.isArray(job.depositHistory)) {
+        job.depositHistory = [];
+      }
+
+      job.returned = Number(job.returned || 0) + quantity;
+
+      job.depositHistory.push({
+        id: crypto.randomUUID(),
+        quantity,
+        date: new Date().toISOString()
+      });
+
+      saveJobs();
+      close();
+
+      if (document.getElementById('jobCardDeposit')) {
+        renderJobCard(id);
+      } else {
+        renderJobTable();
+      }
+    });
 }
 
 function openJobForm() {
