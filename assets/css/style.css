@@ -2540,3 +2540,16 @@ td strong {
     font-size: 17px;
   }
 }
+
+/* DASHBOARD METRIC NUMBER - MOBILE */
+@media (max-width: 700px) {
+  .metric strong {
+    font-size: 15px;
+    letter-spacing: -.4px;
+    margin: 4px 0 1px;
+  }
+
+  .metric strong small {
+    font-size: 9px;
+  }
+}
