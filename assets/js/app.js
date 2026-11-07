@@ -482,47 +482,134 @@ function selectQuickMoveStage(target, title) {
 
 function renderDashboard() {
   const metrics = document.querySelectorAll('.metrics .metric');
+  const format = value => Number(value || 0).toLocaleString('id-ID');
+  const money = value => 'Rp ' + format(Math.round(value || 0));
 
-  const totalQuantity = jobs.reduce((sum, job) =>
-    sum + Number(job.quantity || 0), 0);
+  const isCompleted = job =>
+    (Array.isArray(job.workReports) &&
+      job.workReports.some(item => item.note === 'Selesai')) ||
+    Number(job.returned || 0) >= Number(job.quantity || 0);
 
-  const totalReturned = jobs.reduce((sum, job) =>
-    sum + Number(job.returned || 0), 0);
-
-  const remaining = Math.max(0, totalQuantity - totalReturned);
-
+  // Pekerja yang masih aktif, termasuk yang sedang mengerjakan.
   const activeWorkers = workers.filter(w =>
-    w.status === 'Aktif'
-  ).length;
+    ['Aktif', 'Dikerjakan'].includes(w.status)
+  );
 
-  const payroll = jobs.reduce((sum, job) =>
-    sum + calculateJobPay(job), 0);
+  // Pekerja aktif yang belum menerima pekerjaan.
+  const waitingWorkers = activeWorkers.filter(w =>
+    w.status === 'Aktif' && !getActiveAssignment(w.id)
+  );
 
-  const format = value => Number(value).toLocaleString('id-ID');
+  // Penugasan yang masih dipegang pekerja.
+  const activeJobs = jobs.filter(job =>
+    job.distributionReleased !== true &&
+    Number(job.returned || 0) < Number(job.quantity || 0) &&
+    !isCompleted(job)
+  );
 
-  if (metrics.length >= 4) {
-    metrics[0].querySelector('strong').innerHTML =
-      `${format(totalQuantity)} <small>pcs</small>`;
-    metrics[0].querySelector('p').textContent =
-      `${jobs.length} pekerjaan tercatat`;
+  const activeQuantity = activeJobs.reduce((sum, job) =>
+    sum + Math.max(0, Number(job.quantity || 0) -
+      Number(job.returned || 0)), 0);
 
-    metrics[1].querySelector('strong').textContent =
-      format(activeWorkers);
-    metrics[1].querySelector('p').textContent =
-      `Dari ${workers.length} pekerja terdaftar`;
+  // Catatan kekurangan beserta umur catatannya.
+  const shortages = [];
 
-    metrics[2].querySelector('strong').innerHTML =
-      `${format(remaining)} <small>pcs</small>`;
-    metrics[2].querySelector('p').textContent =
-      'Barang belum disetor';
+  jobs.forEach(job => {
+    const reports = Array.isArray(job.workReports)
+      ? job.workReports : [];
 
-    metrics[3].querySelector('strong').textContent =
-      `Rp ${format(Math.round(payroll))}`;
-    metrics[3].querySelector('p').textContent =
-      'Estimasi upah barang disetor';
-  }
+    const worker = workers.find(w =>
+      String(w.id) === String(job.workerId)
+    );
 
-  // Aktivitas pekerjaan terbaru
+    reports.forEach(report => {
+      const quantity = Number(report.shortageQuantity || 0);
+      if (quantity <= 0) return;
+
+      const date = report.date ? new Date(report.date) : null;
+      const validDate = date && !isNaN(date.getTime());
+      const days = validDate
+        ? Math.max(0, Math.floor(
+            (Date.now() - date.getTime()) / 86400000
+          ))
+        : null;
+
+      shortages.push({
+        worker: worker?.name || 'Pekerja tidak ditemukan',
+        product: job.product || '-',
+        note: report.note || 'Kekurangan',
+        quantity,
+        days,
+        date: validDate ? date : null
+      });
+    });
+  });
+
+  shortages.sort((a, b) =>
+    (b.days ?? -1) - (a.days ?? -1)
+  );
+
+  const shortageTotal = shortages.reduce((sum, item) =>
+    sum + item.quantity, 0);
+
+  // Upah belum dibayar pada periode payroll minggu berjalan.
+  const currentPeriod = payrollPeriod(payrollToday());
+  const paidData = payrollPaidData();
+  const periodArchived = payrollIsArchived(currentPeriod.key);
+
+  const wageRows = periodArchived ? [] : workers.map(worker => {
+    const paid = !!paidData[currentPeriod.key]?.[worker.id];
+    if (paid) return null;
+
+    const rows = payrollRows(worker.id, currentPeriod);
+    const total = rows.reduce((sum, row) =>
+      sum + (Number(row.pay) || 0), 0);
+
+    return { name: worker.name, total };
+  }).filter(item => item && item.total > 0)
+    .sort((a, b) => b.total - a.total);
+
+  const totalPayroll = wageRows.reduce((sum, item) =>
+    sum + item.total, 0);
+
+  // Empat kartu ringkasan dashboard.
+  const metricData = [
+    {
+      label: 'Pekerja aktif',
+      value: format(activeWorkers.length),
+      detail: `${workers.length} pekerja terdaftar`
+    },
+    {
+      label: 'Belum menerima pekerjaan',
+      value: format(waitingWorkers.length),
+      detail: 'Pekerja siap menerima barang'
+    },
+    {
+      label: 'Barang sedang dikerjakan',
+      value: `${format(activeQuantity)} pcs`,
+      detail: `${activeJobs.length} penugasan berjalan`
+    },
+    {
+      label: 'Upah belum dibayar',
+      value: money(totalPayroll),
+      detail: periodArchived ? 'Periode sudah tutup buku' : `${wageRows.length} pekerja belum menerima upah`
+    }
+  ];
+
+  metrics.forEach((metric, index) => {
+    const item = metricData[index];
+    if (!item) return;
+
+    const label = metric.querySelector('span');
+    const strong = metric.querySelector('strong');
+    const detail = metric.querySelector('p');
+
+    if (label) label.textContent = item.label;
+    if (strong) strong.textContent = item.value;
+    if (detail) detail.textContent = item.detail;
+  });
+
+  // Aktivitas pekerjaan terbaru.
   const tbody = document.querySelector(
     '.dashboard-grid .panel table tbody'
   );
@@ -532,19 +619,19 @@ function renderDashboard() {
       const worker = workers.find(w => w.id === job.workerId);
       const left = Math.max(
         0,
-        Number(job.quantity) - Number(job.returned)
+        Number(job.quantity || 0) - Number(job.returned || 0)
       );
 
-      const status = left === 0
+      const status = isCompleted(job)
         ? 'Selesai'
-        : Number(job.returned) > 0
+        : Number(job.returned || 0) > 0
           ? 'Sebagian setor'
           : 'Belum setor';
 
       return `
         <tr>
           <td><strong>${escapeHTML(worker?.name || 'Pekerja tidak ditemukan')}</strong></td>
-          <td>${escapeHTML(job.type)} — ${escapeHTML(job.product)}</td>
+          <td>${escapeHTML(job.type || '-')} — ${escapeHTML(job.product || '-')}</td>
           <td>${format(job.quantity)} pcs</td>
           <td>${status}</td>
         </tr>
@@ -554,25 +641,46 @@ function renderDashboard() {
     `;
   }
 
-  // Keuangan belum punya modul transaksi
+  // Rincian akumulasi upah per pekerja.
   const finance = document.querySelector('.finance');
+
   if (finance) {
     finance.innerHTML = `
-      <span>Data transaksi keuangan belum tersedia.</span>
-      <p>Modul keuangan belum dihubungkan.</p>
+      <div class="owner-wage-total">
+        <span>Total upah belum dibayar</span>
+        <strong>${money(totalPayroll)}</strong>
+        <small>Minggu ini · ${currentPeriod.start} – ${currentPeriod.end}${periodArchived ? ' · Tutup buku' : ''}</small>
+      </div>
+
+      <div class="owner-wage-list">
+        ${wageRows.length ? wageRows.map(item => `
+          <div class="owner-wage-row">
+            <span>${escapeHTML(item.name)}</span>
+            <strong>${money(item.total)}</strong>
+          </div>
+        `).join('') : `
+          <p class="owner-empty">Tidak ada upah yang belum dibayar pada periode ini.</p>
+        `}
+      </div>
     `;
   }
 
-  // Progres barang
+  // Progres penugasan yang masih berjalan.
   const progress = document.querySelector('.progress-list');
 
   if (progress) {
-    const returnedPercent = totalQuantity
-      ? (totalReturned / totalQuantity) * 100
+    const totalActive = activeJobs.reduce((sum, job) =>
+      sum + Number(job.quantity || 0), 0);
+
+    const returnedActive = activeJobs.reduce((sum, job) =>
+      sum + Number(job.returned || 0), 0);
+
+    const returnedPercent = totalActive
+      ? Math.min(100, returnedActive / totalActive * 100)
       : 0;
 
-    const remainingPercent = totalQuantity
-      ? (remaining / totalQuantity) * 100
+    const remainingPercent = totalActive
+      ? Math.max(0, 100 - returnedPercent)
       : 0;
 
     progress.innerHTML = `
@@ -588,6 +696,89 @@ function renderDashboard() {
           <i style="width:${remainingPercent}%"></i>
         </div>
       </div>
+      <small class="owner-muted">${format(activeJobs.length)} penugasan aktif</small>
+    `;
+  }
+
+  // Daftar barang yang masih dikerjakan dan durasi penugasan.
+  const workPanel = document.querySelector('.owner-active-work');
+
+  if (workPanel) {
+    workPanel.innerHTML = activeJobs.length
+      ? activeJobs.map(job => {
+          const worker = workers.find(w =>
+            String(w.id) === String(job.workerId)
+          );
+
+          const created = job.createdAt
+            ? new Date(job.createdAt) : null;
+
+          const validDate = created && !isNaN(created.getTime());
+          let elapsed = 'Waktu mulai tidak tersedia';
+
+          if (validDate) {
+            const hours = Math.max(0,
+              Math.floor((Date.now() - created.getTime()) / 3600000)
+            );
+
+            const days = Math.floor(hours / 24);
+            const restHours = hours % 24;
+
+            elapsed = days > 0
+              ? `${days} hari ${restHours} jam`
+              : `${restHours} jam`;
+          }
+
+          const left = Math.max(0,
+            Number(job.quantity || 0) - Number(job.returned || 0)
+          );
+
+          return `
+            <article class="owner-work-item">
+              <div>
+                <strong>${escapeHTML(job.product || '-')}</strong>
+                <small>${escapeHTML(worker?.name || 'Pekerja tidak ditemukan')}</small>
+              </div>
+              <div class="owner-work-meta">
+                <b>${format(left)} pcs tersisa</b>
+                <span>Berjalan ${elapsed}</span>
+              </div>
+            </article>
+          `;
+        }).join('')
+      : '<p class="owner-empty">Tidak ada barang yang sedang dipegang pekerja.</p>';
+  }
+
+  // Daftar catatan kekurangan dan umur catatan.
+  const shortagePanel = document.querySelector('.owner-shortages');
+
+  if (shortagePanel) {
+    shortagePanel.innerHTML = `
+      <div class="owner-shortage-total">
+        <strong>${format(shortageTotal)} PCS</strong>
+        <span>${shortages.length} catatan kekurangan</span>
+      </div>
+
+      ${shortages.length ? shortages.slice(0, 8).map(item => `
+        <article class="owner-shortage-item">
+          <div>
+            <strong>${escapeHTML(item.product)}</strong>
+            <small>${escapeHTML(item.worker)} · ${escapeHTML(item.note)}</small>
+          </div>
+          <div>
+            <b>${format(item.quantity)} pcs</b>
+            <small>${item.days === null
+              ? 'Tanggal tidak tersedia'
+              : `${item.days} hari sejak dicatat`}</small>
+          </div>
+        </article>
+      `).join('') : `
+        <p class="owner-empty">Belum ada catatan kekurangan.</p>
+      `}
+
+      <small class="owner-muted">
+        Umur dihitung sejak laporan dibuat. Status penyelesaian belum tercatat.
+      </small>
     `;
   }
 }

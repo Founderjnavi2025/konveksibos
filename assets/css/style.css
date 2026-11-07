@@ -2299,3 +2299,129 @@ td strong {
     max-width: none;
   }
 }
+
+
+/* DASHBOARD OPERASIONAL BOS */
+.dashboard-extra {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.owner-active-work,
+.owner-shortages {
+  padding: 15px 18px;
+}
+
+.owner-work-item,
+.owner-shortage-item,
+.owner-wage-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.owner-work-item:last-child,
+.owner-shortage-item:last-child,
+.owner-wage-row:last-child {
+  border-bottom: 0;
+}
+
+.owner-work-item > div,
+.owner-shortage-item > div {
+  display: grid;
+  gap: 5px;
+}
+
+.owner-work-item strong,
+.owner-shortage-item strong {
+  font-size: 12px;
+  color: var(--ink);
+}
+
+.owner-work-item small,
+.owner-shortage-item small,
+.owner-work-meta span,
+.owner-muted {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.owner-work-meta,
+.owner-shortage-item > div:last-child {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.owner-work-meta b,
+.owner-shortage-item > div:last-child b {
+  display: block;
+  font-size: 11px;
+  color: var(--blue);
+}
+
+.owner-shortage-total,
+.owner-wage-total {
+  display: grid;
+  gap: 5px;
+  padding: 5px 0 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.owner-shortage-total strong,
+.owner-wage-total strong {
+  font-size: 22px;
+  color: var(--ink);
+}
+
+.owner-shortage-total span,
+.owner-wage-total span,
+.owner-wage-total small {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.owner-wage-list {
+  padding: 0 18px;
+}
+
+.owner-wage-row span {
+  font-size: 11px;
+  color: var(--ink);
+}
+
+.owner-wage-row strong {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.owner-empty {
+  color: var(--muted);
+  font-size: 11px;
+  padding: 8px 0;
+}
+
+.owner-muted {
+  display: block;
+  margin-top: 10px;
+}
+
+@media(max-width:700px) {
+  .dashboard-extra {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .owner-active-work,
+  .owner-shortages {
+    padding: 12px;
+  }
+
+  .owner-wage-list {
+    padding: 0 12px;
+  }
+}
