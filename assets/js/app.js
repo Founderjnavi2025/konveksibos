@@ -1597,7 +1597,7 @@ function createJob(event) {
 }
 
 function calculateJobPay(job) {
-  const completed = Number(job.payableQuantity ?? job.returned ?? 0);
+  const completed = Number(job.returned || 0);
 
   return job.unit === 'lusin'
     ? (completed / 12) * job.rate
