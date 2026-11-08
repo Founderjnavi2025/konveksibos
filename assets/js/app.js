@@ -1817,7 +1817,9 @@ function renderJobCard(id) {
 
           <div class="job-detail-field">
             <small>Hasil dilaporkan</small>
-            <strong>${reportedQuantity} pcs</strong>
+            <strong id="reportedQuantityValue"
+              style="cursor:pointer;text-decoration:underline;text-decoration-style:dotted"
+              title="Klik untuk edit hasil dilaporkan">${reportedQuantity} pcs ✎</strong>
           </div>
 
           <div class="job-detail-field">
@@ -1858,11 +1860,119 @@ function renderJobCard(id) {
   document.getElementById('backToJobList')
     ?.addEventListener('click', renderJobs);
 
+  document.getElementById('reportedQuantityValue')
+    ?.addEventListener('click', () => startEditReportedQuantity(id));
+
   document.getElementById('editJobDetail')
     ?.addEventListener('click', () => editJobDetail(id));
 
 }
 
+
+
+function startEditReportedQuantity(id) {
+  const job = jobs.find(item => item.id === id);
+  if (!job) return;
+
+  if (jobHasLockedPayroll(job)) {
+    alert('Pekerjaan tidak bisa diedit karena periode gaji sudah dibayar atau tutup buku.');
+    return;
+  }
+
+  const reports = Array.isArray(job.workReports)
+    ? job.workReports : [];
+
+  if (!reports.length) {
+    alert('Riwayat laporan tidak tersedia untuk diedit.');
+    return;
+  }
+
+  const current = Number(job.payableQuantity ?? job.returned ?? 0);
+  const el = document.getElementById('reportedQuantityValue');
+  if (!el) return;
+
+  el.innerHTML = `
+    <input id="editReportedQtyInput" type="number"
+      min="0" max="${Number(job.quantity)}"
+      value="${current}"
+      style="width:90px;padding:6px;font-size:16px">
+    <button type="button" id="saveReportedQty">Simpan</button>
+    <button type="button" id="cancelReportedQty">Batal</button>
+  `;
+
+  document.getElementById('saveReportedQty')
+    ?.addEventListener('click', () => saveReportedQuantityEdit(id));
+
+  document.getElementById('cancelReportedQty')
+    ?.addEventListener('click', () => renderJobCard(id));
+}
+
+function saveReportedQuantityEdit(id) {
+  const job = jobs.find(item => item.id === id);
+  if (!job) return;
+
+  if (jobHasLockedPayroll(job)) {
+    alert('Periode gaji sudah dibayar atau tutup buku.');
+    return;
+  }
+
+  const reports = Array.isArray(job.workReports)
+    ? job.workReports : [];
+
+  if (!reports.length) return;
+
+  const input = document.getElementById('editReportedQtyInput');
+  const newTotal = Number(input?.value);
+
+  if (!Number.isInteger(newTotal) ||
+      newTotal < 0 ||
+      newTotal > Number(job.quantity)) {
+    alert('Jumlah harus berupa angka bulat antara 0 dan jumlah pekerjaan.');
+    return;
+  }
+
+  const lastReport = reports[reports.length - 1];
+  const previousTotal = reports
+    .slice(0, -1)
+    .reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+
+  const newLastQuantity = newTotal - previousTotal;
+
+  if (newLastQuantity < 0) {
+    alert('Jumlah baru tidak boleh lebih kecil dari laporan sebelumnya.');
+    return;
+  }
+
+  const oldLastQuantity = Number(lastReport.quantity || 0);
+  const difference = newLastQuantity - oldLastQuantity;
+
+  if (lastReport.note === 'Selesai') {
+    const newReturned = Number(job.returned || 0) + difference;
+    const history = Array.isArray(job.depositHistory)
+      ? job.depositHistory : [];
+
+    if (newReturned < 0 ||
+        (history.length &&
+         Number(history[history.length - 1].quantity || 0) + difference < 0)) {
+      alert('Perubahan tidak valid karena melebihi jumlah setoran yang tercatat.');
+      return;
+    }
+
+    job.returned = newReturned;
+
+    if (history.length) {
+      history[history.length - 1].quantity =
+        Number(history[history.length - 1].quantity || 0) + difference;
+    }
+  }
+
+  lastReport.quantity = newLastQuantity;
+  job.payableQuantity = newTotal;
+
+  saveJobs();
+  renderJobCard(id);
+  renderJobTable();
+}
 
 function jobHasLockedPayroll(job) {
   const workerId = String(job.workerId);
