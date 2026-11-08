@@ -91,6 +91,8 @@ Deno.serve(async (req) => {
 
     const result = await midtransResponse.json();
 
+    console.log("MIDTRANS RESPONSE:", result);
+
     if (!midtransResponse.ok) {
       await admin.from("payments")
         .update({ status: "failed" })
