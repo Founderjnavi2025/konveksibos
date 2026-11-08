@@ -1839,6 +1839,11 @@ function renderJobCard(id) {
         </div>
 
 
+        <button type="button" class="job-card-back"
+          id="editJobDetail" style="margin-top:16px">
+          ✎ Edit Detail Pekerjaan
+        </button>
+
         <details class="job-detail-history">
           <summary>Riwayat pekerjaan</summary>
           ${historyHTML
@@ -1853,6 +1858,170 @@ function renderJobCard(id) {
   document.getElementById('backToJobList')
     ?.addEventListener('click', renderJobs);
 
+  document.getElementById('editJobDetail')
+    ?.addEventListener('click', () => editJobDetail(id));
+
+}
+
+
+function jobHasLockedPayroll(job) {
+  const workerId = String(job.workerId);
+  const reports = Array.isArray(job.workReports)
+    ? job.workReports : [];
+
+  const dates = reports.map(report => report.date);
+
+  if (!reports.length && job.createdAt) {
+    dates.push(job.createdAt);
+  }
+
+  const paidData = payrollPaidData();
+
+  return dates.some(value => {
+    const date = payrollDate(value);
+    if (!date) return false;
+
+    const period = payrollPeriod(payrollISO(date));
+
+    return payrollIsArchived(period.key) ||
+      !!paidData[period.key]?.[workerId];
+  });
+}
+
+
+function editJobDetail(id) {
+  const job = jobs.find(item => item.id === id);
+  if (!job) return;
+
+  if (jobHasLockedPayroll(job)) {
+    alert('Detail tidak bisa diedit karena periode pekerjaan sudah dibayar atau tutup buku.');
+    return;
+  }
+
+  document.getElementById('editJobModal')?.remove();
+
+  const workerOptions = workers.map(worker => `
+    <option value="${escapeHTML(worker.id)}"
+      ${String(worker.id) === String(job.workerId) ? 'selected' : ''}>
+      ${escapeHTML(worker.name || 'Tanpa nama')}
+    </option>
+  `).join('');
+
+  const modal = document.createElement('div');
+  modal.id = 'editJobModal';
+  modal.className = 'worker-modal-overlay';
+
+  modal.innerHTML = `
+    <section class="worker-modal">
+      <div class="worker-modal-head">
+        <div>
+          <span class="quick-modal-kicker">KONVEKSIBOS / EDIT</span>
+          <h2>Edit Detail Pekerjaan</h2>
+          <p>Perubahan tidak menghapus riwayat pekerjaan.</p>
+        </div>
+        <button type="button" class="quick-close"
+          id="closeEditJob">×</button>
+      </div>
+
+      <form id="editJobForm">
+        <label>Pekerja</label>
+        <select name="workerId" required>
+          ${workerOptions}
+        </select>
+
+        <label>Nama barang</label>
+        <input name="product" required
+          value="${escapeHTML(job.product || '')}">
+
+        <label>Jenis pekerjaan</label>
+        <input name="type" required
+          value="${escapeHTML(job.type || '')}">
+
+        <label>Jumlah barang (pcs)</label>
+        <input name="quantity" type="number" min="1" step="1"
+          required value="${Number(job.quantity) || 0}">
+
+        <label>Satuan tarif</label>
+        <select name="unit" required>
+          <option value="pcs" ${job.unit !== 'lusin' ? 'selected' : ''}>Per pcs</option>
+          <option value="lusin" ${job.unit === 'lusin' ? 'selected' : ''}>Per lusin</option>
+        </select>
+
+        <label>Tarif upah (Rp)</label>
+        <input name="rate" type="number" min="0" step="1"
+          required value="${Number(job.rate) || 0}">
+
+        <button type="submit" class="primary-button"
+          style="width:100%;margin-top:16px">
+          Simpan Perubahan
+        </button>
+      </form>
+    </section>
+  `;
+
+  document.body.appendChild(modal);
+
+  const close = () => modal.remove();
+
+  document.getElementById('closeEditJob')
+    ?.addEventListener('click', close);
+
+  modal.addEventListener('click', event => {
+    if (event.target === modal) close();
+  });
+
+  document.getElementById('editJobForm')
+    ?.addEventListener('submit', event => {
+      event.preventDefault();
+
+      if (jobHasLockedPayroll(job)) {
+        alert('Periode pekerjaan sudah dikunci oleh pembayaran.');
+        close();
+        return;
+      }
+
+      const form = event.currentTarget;
+      const data = new FormData(form);
+
+      const quantity = Number(data.get('quantity'));
+      const rate = Number(data.get('rate'));
+
+      const reports = Array.isArray(job.workReports)
+        ? job.workReports : [];
+
+      const reported = reports.reduce((sum, report) =>
+        sum + (Number(report.quantity) || 0), 0);
+
+      const returned = Number(job.returned || 0);
+
+      if (!Number.isInteger(quantity) || quantity < 1) {
+        alert('Jumlah barang harus berupa bilangan bulat positif.');
+        return;
+      }
+
+      if (quantity < Math.max(reported, returned)) {
+        alert('Jumlah barang tidak boleh lebih kecil dari hasil laporan atau setoran.');
+        return;
+      }
+
+      if (!Number.isFinite(rate) || rate < 0) {
+        alert('Tarif upah tidak valid.');
+        return;
+      }
+
+      if (!confirm('Simpan perubahan detail pekerjaan ini?')) return;
+
+      job.workerId = String(data.get('workerId'));
+      job.product = String(data.get('product')).trim();
+      job.type = String(data.get('type')).trim();
+      job.quantity = quantity;
+      job.unit = String(data.get('unit'));
+      job.rate = rate;
+
+      saveJobs();
+      close();
+      renderJobCard(id);
+    });
 }
 
 
