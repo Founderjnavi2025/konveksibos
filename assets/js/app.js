@@ -1701,7 +1701,13 @@ function renderJobCard(id) {
 
   const worker = workers.find(w => w.id === job.workerId);
   const returned = Number(job.returned || 0);
-  const remaining = Math.max(0, Number(job.quantity) - returned);
+  const reportedQuantity = Number(
+    job.payableQuantity ?? returned
+  );
+  const remaining = Math.max(
+    0,
+    Number(job.quantity) - reportedQuantity
+  );
 
   const reportedDone = Array.isArray(job.workReports) &&
     job.workReports.some(item => item.note === 'Selesai');
@@ -1795,8 +1801,8 @@ function renderJobCard(id) {
           </div>
 
           <div class="job-detail-field">
-            <small>Disetor</small>
-            <strong>${returned} pcs</strong>
+            <small>Hasil dilaporkan</small>
+            <strong>${reportedQuantity} pcs</strong>
           </div>
 
           <div class="job-detail-field">
