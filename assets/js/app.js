@@ -1817,12 +1817,6 @@ function renderJobCard(id) {
             ? 'done' : 'progress'}">${escapeHTML(status)}</strong>
         </div>
 
-        <div class="job-detail-actions">
-          ${remaining > 0
-            ? `<button type="button" class="primary"
-                id="jobCardDeposit">Catat setor</button>`
-            : ''}
-        </div>
 
         <details class="job-detail-history">
           <summary>Riwayat pekerjaan</summary>
@@ -1838,8 +1832,6 @@ function renderJobCard(id) {
   document.getElementById('backToJobList')
     ?.addEventListener('click', renderJobs);
 
-  document.getElementById('jobCardDeposit')
-    ?.addEventListener('click', () => recordDeposit(id));
 }
 
 
