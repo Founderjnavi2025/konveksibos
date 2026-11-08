@@ -1515,6 +1515,21 @@ function savePreviousWorkReport(jobId) {
 
   job.payableQuantity = payable + quantity;
 
+  if (note === 'Selesai') {
+    const physicalDeposit = Number(job.returned || 0);
+    job.returned = physicalDeposit + quantity;
+
+    if (!Array.isArray(job.depositHistory)) {
+      job.depositHistory = [];
+    }
+
+    job.depositHistory.push({
+      id: crypto.randomUUID(),
+      quantity,
+      date: new Date().toISOString()
+    });
+  }
+
   job.workReports.push({
     id: crypto.randomUUID(),
     quantity,
