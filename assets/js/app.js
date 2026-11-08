@@ -2174,52 +2174,33 @@ function renderPayrollPayment(workerId) {
         : [];
 
       reports.forEach(report => {
-        const quantity = Number(report.quantity) || 0;
+        const pcs = Number(report.quantity) || 0;
         const rate = Number(job.rate) || 0;
 
-        const pay = job.unit === 'lusin'
-          ? quantity / 12 * rate
-          : quantity * rate;
+        const pricePerDozen = job.unit === 'lusin'
+          ? rate
+          : rate * 12;
+
+        const total = (pcs / 12) * pricePerDozen;
 
         rows.push({
           date: report.date,
           product: job.product || '-',
-          type: job.type || '-',
-          quantity,
-          unit: job.unit || 'pcs',
-          note: report.note || 'Laporan pekerjaan',
-          pay
+          pcs,
+          pricePerDozen,
+          total
         });
       });
-
-      const reported = reports.reduce(
-        (sum, report) => sum + (Number(report.quantity) || 0),
-        0
-      );
-
-      const outstanding = Math.max(
-        0,
-        Number(job.quantity || 0) - reported
-      );
-
-      if (outstanding > 0) {
-        rows.push({
-          date: job.createdAt,
-          product: job.product || '-',
-          type: job.type || '-',
-          quantity: outstanding,
-          unit: job.unit || 'pcs',
-          note: 'Belum dilaporkan',
-          pay: 0
-        });
-      }
     });
 
   rows.sort((a, b) =>
     String(a.date || '').localeCompare(String(b.date || ''))
   );
 
-  const total = rows.reduce((sum, row) => sum + row.pay, 0);
+  const grandTotal = rows.reduce(
+    (sum, row) => sum + row.total,
+    0
+  );
 
   const formatDate = value => {
     const date = payrollDate(value);
@@ -2231,7 +2212,7 @@ function renderPayrollPayment(workerId) {
   mainAction.style.display = 'none';
   pageTitle.textContent = 'Bayar Gaji';
   breadcrumb.textContent = 'Payroll / Bayar Gaji';
-  description.textContent = 'Rincian pekerjaan dan upah pekerja.';
+  description.textContent = 'Rincian upah berdasarkan laporan pekerjaan.';
 
   content.innerHTML = `
     <section class="panel payroll-panel">
@@ -2248,26 +2229,40 @@ function renderPayrollPayment(workerId) {
         </div>
       </div>
 
-      <div class="payroll-total-card">
-        <span>Total upah tercatat</span>
-        <strong>${payrollMoney(total)}</strong>
+      <div style="overflow-x:auto">
+        <table class="payroll-payment-table">
+          <thead>
+            <tr>
+              <th>Tanggal</th>
+              <th>Nama Barang</th>
+              <th>PCS</th>
+              <th>Harga/Lusin</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(row => `
+              <tr>
+                <td>${formatDate(row.date)}</td>
+                <td>${payrollEscape(row.product)}</td>
+                <td>${row.pcs.toLocaleString('id-ID')}</td>
+                <td>${payrollMoney(row.pricePerDozen)}</td>
+                <td><strong>${payrollMoney(row.total)}</strong></td>
+              </tr>
+            `).join('') || `
+              <tr>
+                <td colspan="5" style="text-align:center;padding:24px">
+                  Belum ada laporan pekerjaan.
+                </td>
+              </tr>
+            `}
+          </tbody>
+        </table>
       </div>
 
-      <div class="payroll-simple-list">
-        ${rows.map(row => `
-          <article class="payroll-job-row">
-            <div>
-              <strong>${payrollEscape(row.product)}</strong>
-              <small>${payrollEscape(row.type)} · ${formatDate(row.date)}</small>
-              <small>${row.quantity} ${payrollEscape(row.unit)} · ${payrollEscape(row.note)}</small>
-            </div>
-            <strong>${payrollMoney(row.pay)}</strong>
-          </article>
-        `).join('') || `
-          <div class="payroll-simple-empty">
-            Belum ada catatan pekerjaan.
-          </div>
-        `}
+      <div class="payroll-total-card">
+        <span>TOTAL GAJI</span>
+        <strong>${payrollMoney(grandTotal)}</strong>
       </div>
     </section>
   `;
