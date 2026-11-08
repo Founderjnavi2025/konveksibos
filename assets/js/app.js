@@ -1230,22 +1230,11 @@ function saveJobs() {
 
 function getActiveAssignment(workerId) {
   return jobs
-    .filter(job => {
-      if (String(job.workerId) !== String(workerId)) return false;
-
-      const reports = Array.isArray(job.workReports)
-        ? job.workReports : [];
-
-      // Setelah laporan pertama, pekerja boleh mengambil pekerjaan baru.
-      if (reports.length > 0) return false;
-
-      const reported = Math.max(
-        Number(job.payableQuantity || 0),
-        Number(job.returned || 0)
-      );
-
-      return reported < Number(job.quantity || 0);
-    })
+    .filter(job =>
+      job.workerId === workerId &&
+      job.distributionReleased !== true &&
+      Number(job.returned || 0) < Number(job.quantity)
+    )
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0] || null;
 }
 
@@ -1635,18 +1624,14 @@ function renderJobTable() {
   const tbody = document.getElementById('jobTable');
   if (!tbody) return;
 
-  const isReportedComplete = job => {
-    const reports = Array.isArray(job.workReports)
-      ? job.workReports : [];
+  const isReportedComplete = job =>
+    Array.isArray(job.workReports) &&
+    job.workReports.some(item => item.note === 'Selesai');
 
-    const latestReport = reports[reports.length - 1];
-
-    if (latestReport) return latestReport.note === 'Selesai';
-
-    return Number(job.returned || 0) >= Number(job.quantity || 0);
-  };
-
-  const completedJobs = jobs.filter(isReportedComplete);
+  const completedJobs = jobs.filter(job =>
+    isReportedComplete(job) ||
+    Number(job.returned || 0) >= Number(job.quantity)
+  );
 
   const activeJobs = jobs.filter(job =>
     !completedJobs.includes(job)
@@ -1692,16 +1677,9 @@ function renderJobTable() {
     const returned = Number(job.returned || 0);
     const remaining = Math.max(0, Number(job.quantity) - returned);
 
-    const reports = Array.isArray(job.workReports)
-      ? job.workReports : [];
-
-    const latestReport = reports[reports.length - 1];
-
-    const status = latestReport
-      ? latestReport.note
-      : returned >= Number(job.quantity || 0)
-        ? 'Selesai'
-        : returned > 0 ? 'Sebagian setor' : 'Belum setor';
+    const status = isReportedComplete(job) || remaining === 0
+      ? 'Selesai'
+      : returned > 0 ? 'Sebagian setor' : 'Belum setor';
 
     return `
       <button type="button" class="job-contact-item"
@@ -1746,16 +1724,12 @@ function renderJobCard(id) {
     Number(job.quantity) - reportedQuantity
   );
 
-  const reportsForStatus = Array.isArray(job.workReports)
-    ? job.workReports : [];
+  const reportedDone = Array.isArray(job.workReports) &&
+    job.workReports.some(item => item.note === 'Selesai');
 
-  const latestReport = reportsForStatus[reportsForStatus.length - 1];
-
-  const status = latestReport
-    ? latestReport.note
-    : returned >= Number(job.quantity || 0)
-      ? 'Selesai'
-      : returned > 0 ? 'Sebagian setor' : 'Belum setor';
+  const status = reportedDone || remaining === 0
+    ? 'Selesai'
+    : returned > 0 ? 'Sebagian setor' : 'Belum setor';
 
   const history = Array.isArray(job.depositHistory)
     ? job.depositHistory : [];
@@ -2361,10 +2335,9 @@ function payrollRows(workerId, period) {
 
         const qty = Number(report.quantity) || 0;
         const rate = Number(job.rate) || 0;
-        // Hanya laporan dengan keterangan Selesai yang dihitung sebagai upah.
-        const pay = report.note === 'Selesai'
-          ? (job.unit === 'lusin' ? qty / 12 * rate : qty * rate)
-          : 0;
+        const pay = job.unit === 'lusin'
+          ? qty / 12 * rate
+          : qty * rate;
 
         rows.push({
           date,
