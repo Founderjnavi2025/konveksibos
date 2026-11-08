@@ -2106,142 +2106,52 @@ function payrollChangeWeek(value) {
 function renderPayroll() {
   mainAction.style.display = 'none';
 
-  const period = payrollPeriod(payrollWeekDate);
-  const archived = payrollIsArchived(period.key);
-  const paidData = payrollPaidData();
   const allWorkers = Array.isArray(workers) ? workers : [];
 
-  if (!payrollSelectedWorkerId ||
-      !allWorkers.some(w => String(w.id) === String(payrollSelectedWorkerId))) {
-    payrollSelectedWorkerId = allWorkers[0]?.id ?? null;
-  }
-
-  const summaries = allWorkers.map(worker => {
-    const rows = payrollRows(worker.id, period);
-    const total = rows.reduce((sum, r) => sum + r.pay, 0);
-    return {
-      worker,
-      rows,
-      total,
-      paid: !!paidData[period.key]?.[worker.id]
-    };
-  });
-
-  const totalAll = summaries.reduce((sum, x) => sum + x.total, 0);
-  const payable = summaries.filter(x => x.total > 0);
-  const allPaid = payable.length > 0 && payable.every(x => x.paid);
-  const selected = summaries.find(x =>
-    String(x.worker.id) === String(payrollSelectedWorkerId));
-
-  const dateLabel = d => new Date(d + 'T12:00:00')
-    .toLocaleDateString('id-ID', {
-      day: 'numeric', month: 'short', year: 'numeric'
-    });
-
   content.innerHTML = `
-    <section class="panel payroll-panel">
-      <div class="payroll-week">
-        <label for="payrollWeek">Pilih tanggal dalam minggu kerja</label>
-        <input id="payrollWeek" type="date"
-          value="${payrollEscape(payrollWeekDate)}"
-          onchange="payrollChangeWeek(this.value)">
-        <small>Periode: ${dateLabel(period.start)} – ${dateLabel(period.end)}</small>
-      </div>
-
-      <div class="payroll-total">
-        <small>Total upah seluruh pekerja</small>
-        <strong>${payrollMoney(totalAll)}</strong>
-        <span>${payable.length} pekerja memiliki upah pada periode ini</span>
-      </div>
-
-      <h3>Daftar pekerja</h3>
-      <div class="payroll-worker-tabs">
-        ${summaries.map(x => `
-          <button class="payroll-worker-tab ${String(x.worker.id) === String(payrollSelectedWorkerId) ? 'active' : ''}"
-            onclick="payrollSelectWorker('${payrollEscape(x.worker.id)}')">
-            ${payrollEscape(x.worker.name || 'Tanpa nama')}
-          </button>
-        `).join('') || '<p>Belum ada pekerja.</p>'}
-      </div>
-
-      ${selected ? `
-        <div class="payroll-worker-detail">
-          <div class="payroll-worker-head">
-            <div>
-              <h3>${payrollEscape(selected.worker.name || 'Pekerja')}</h3>
-              <p>${payrollEscape(selected.worker.role || selected.worker.position || 'Pekerja')}</p>
-            </div>
-            <span class="payroll-paid-label ${selected.paid ? 'is-paid' : ''}">
-              ${selected.paid ? 'Sudah gajian' : 'Belum gajian'}
-            </span>
-          </div>
-
-          <div class="payroll-worker-total">
-            <small>Total upah pekerja</small>
-            <strong>${payrollMoney(selected.total)}</strong>
-            <small>${selected.rows.length} catatan aktivitas dalam minggu ini</small>
-          </div>
-
-          <div class="table-scroll payroll-table-scroll">
-            <table class="data-table payroll-table">
-              <thead><tr>
-                <th>Tanggal</th><th>Pekerjaan</th><th>Jumlah</th><th>Keterangan</th><th>Upah</th>
-              </tr></thead>
-              <tbody>
-                ${selected.rows.map(r => `
-                  <tr>
-                    <td>${dateLabel(r.date)}</td>
-                    <td>${payrollEscape(r.product)}<small>${payrollEscape(r.type)}</small></td>
-                    <td>${r.quantity} ${payrollEscape(r.unit)}</td>
-                    <td>${payrollEscape(r.note)}
-                      ${r.shortage ? `<small class="payroll-shortage">Kekurangan: ${r.shortage}</small>` : ''}
-                    </td>
-                    <td>${payrollMoney(r.pay)}</td>
-                  </tr>
-                `).join('') || '<tr><td colspan="5">Belum ada aktivitas pada minggu ini.</td></tr>'}
-              </tbody>
-            </table>
-          </div>
-
-          <div class="payroll-actions">
-            <button class="btn btn-primary"
-              onclick="printPayrollSlip('${payrollEscape(selected.worker.id)}','${period.key}')">
-              Cetak Slip Gaji
-            </button>
-            ${selected.total > 0 && !selected.paid && !archived ? `
-              <button class="btn btn-secondary"
-                onclick="payrollSetPaid('${payrollEscape(selected.worker.id)}','${period.key}')">
-                Tandai Sudah Gajian
-              </button>
-            ` : ''}
-          </div>
+    <section class="panel payroll-panel payroll-simple">
+      <div class="payroll-simple-heading">
+        <div>
+          <span class="payroll-kicker">PENGELOLAAN PEKERJA</span>
+          <h3>Payroll</h3>
+          <p>Kelola gaji dan kasbon setiap pekerja.</p>
         </div>
-      ` : ''}
-
-      <div class="payroll-close-book">
-        <h3>Tutup Buku Mingguan</h3>
-        <p>${archived ? 'Periode ini sudah diarsipkan.' :
-          allPaid ? 'Semua pekerja yang memiliki upah sudah ditandai lunas.' :
-          'Tandai semua pekerja yang memiliki upah sebagai sudah gajian untuk mengaktifkan Tutup Buku.'}</p>
-        <button class="btn btn-primary" ${(!allPaid || archived) ? 'disabled' : ''}
-          onclick="closePayrollBook('${period.key}')">
-          Tutup Buku
-        </button>
+        <span class="payroll-worker-count">
+          ${allWorkers.length} pekerja
+        </span>
       </div>
 
-      <div class="payroll-archives">
-        <h3>Arsip Tutup Buku</h3>
-        ${payrollArchives().slice().reverse().map(a => `
-          <div class="payroll-archive-card">
-            <div>
-              <strong>Tutup Buku ${dateLabel(payrollISO(new Date(a.closedAt)))}</strong>
-              <span>Periode ${dateLabel(a.periodKey)} – ${dateLabel(a.periodEnd)}</span>
-              <small>Total: ${payrollMoney(a.total)}</small>
-            </div>
-            <button class="btn btn-secondary"
-              onclick="printPayrollArchive('${payrollEscape(a.id)}')">Cetak Arsip</button>
+      <div class="payroll-simple-list">
+        ${allWorkers.map(worker => `
+          <div class="payroll-segment">
+            <button type="button"
+              class="payroll-segment-name"
+              onclick="renderWorkerProfile('${payrollEscape(worker.id)}')">
+              <span class="payroll-segment-avatar">
+                ${payrollEscape((worker.name || '?').trim().charAt(0).toUpperCase())}
+              </span>
+              <span>${payrollEscape(worker.name || 'Tanpa nama')}</span>
+            </button>
+
+            <button type="button" class="payroll-segment-action">
+              Bayar Gaji
+            </button>
+
+            <button type="button" class="payroll-segment-action">
+              Kasbon
+            </button>
+
+            <button type="button"
+              class="payroll-segment-more"
+              aria-label="Detail ${payrollEscape(worker.name || 'pekerja')}">
+              ›
+            </button>
           </div>
-        `).join('') || '<p>Belum ada arsip.</p>'}
+        `).join('') || `
+          <div class="payroll-simple-empty">
+            Belum ada pekerja terdaftar.
+          </div>
+        `}
       </div>
     </section>
   `;
