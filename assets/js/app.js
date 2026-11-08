@@ -2188,7 +2188,8 @@ function renderPayrollPayment(workerId) {
           product: job.product || '-',
           pcs,
           pricePerDozen,
-          total
+          total,
+          status: report.note || '-'
         });
       });
     });
@@ -2236,6 +2237,7 @@ function renderPayrollPayment(workerId) {
               <th>Tanggal</th>
               <th>Nama Barang</th>
               <th>PCS</th>
+              <th>Status</th>
               <th>Harga/Lusin</th>
               <th>Total</th>
             </tr>
@@ -2246,12 +2248,13 @@ function renderPayrollPayment(workerId) {
                 <td>${formatDate(row.date)}</td>
                 <td>${payrollEscape(row.product)}</td>
                 <td>${row.pcs.toLocaleString('id-ID')}</td>
+                <td>${payrollEscape(row.status)}</td>
                 <td>${payrollMoney(row.pricePerDozen)}</td>
                 <td><strong>${payrollMoney(row.total)}</strong></td>
               </tr>
             `).join('') || `
               <tr>
-                <td colspan="5" style="text-align:center;padding:24px">
+                <td colspan="6" style="text-align:center;padding:24px">
                   Belum ada laporan pekerjaan.
                 </td>
               </tr>
