@@ -187,7 +187,7 @@ body {
       <strong>Rp50.000</strong>
     </div>
 
-    <button class="pay-button" onclick="alert('Pembayaran belum tersedia. Integrasi Midtrans akan ditambahkan setelah aktivasi akun merchant.')">
+    <button class="pay-button" id="payButton">
       BAYAR SEKARANG
     </button>
 
@@ -196,5 +196,43 @@ body {
     </div>
   </main>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="../assets/js/supabase.js"></script>
+<script>
+document.getElementById("payButton").addEventListener("click", async () => {
+  const button = document.getElementById("payButton");
+
+  try {
+    button.disabled = true;
+    button.textContent = "MEMBUAT TRANSAKSI...";
+
+    const { data: sessionData, error: sessionError } =
+      await window.sb.auth.getSession();
+
+    if (sessionError || !sessionData.session) {
+      throw new Error("Silakan login terlebih dahulu.");
+    }
+
+    const { data, error } = await window.sb.functions.invoke(
+      "midtrans-create",
+      { body: {} }
+    );
+
+    if (error) throw error;
+    if (!data || !data.redirect_url) {
+      throw new Error(data?.error || "URL pembayaran tidak tersedia.");
+    }
+
+    window.location.href = data.redirect_url;
+
+  } catch (error) {
+    alert(error.message || "Gagal membuat transaksi.");
+    button.disabled = false;
+    button.textContent = "BAYAR SEKARANG";
+  }
+});
+</script>
+
 </body>
 </html>
