@@ -1907,6 +1907,61 @@ function editJobDetail(id) {
     </option>
   `).join('');
 
+  const reports = Array.isArray(job.workReports)
+    ? job.workReports : [];
+
+  const reportNotes = [
+    'Masih dikerjakan',
+    'Selesai',
+    'Kurang mangset',
+    'Kurang rip',
+    'Kurang mangset + rip',
+    'Pekerja nonaktif'
+  ];
+
+  const reportsHTML = reports.map((report, index) => {
+    const reportId = String(report.id || index);
+    const shortageNotes = [
+      'Kurang mangset',
+      'Kurang rip',
+      'Kurang mangset + rip'
+    ];
+    const needsShortage = shortageNotes.includes(report.note);
+
+    return `
+      <div class="job-detail-field" style="margin:12px 0;padding:12px">
+        <strong>Laporan ${index + 1}</strong>
+
+        <label>Jumlah hasil (pcs)</label>
+        <input type="number" min="1" step="1"
+          name="reportQuantity_${index}"
+          value="${Number(report.quantity) || 0}" required>
+
+        <label>Keterangan pekerjaan</label>
+        <select name="reportNote_${index}" required>
+          ${reportNotes.map(note => `
+            <option value="${escapeHTML(note)}"
+              ${report.note === note ? 'selected' : ''}>
+              ${escapeHTML(note)}
+            </option>
+          `).join('')}
+        </select>
+
+        <label>Jumlah kekurangan (pcs)</label>
+        <input type="number" min="0" step="1"
+          name="reportShortage_${index}"
+          value="${Number(report.shortageQuantity) || 0}"
+          placeholder="0">
+
+        <small>
+          ${report.date
+            ? escapeHTML(new Date(report.date).toLocaleString('id-ID'))
+            : 'Tanggal tidak tersedia'}
+        </small>
+      </div>
+    `;
+  }).join('');
+
   const modal = document.createElement('div');
   modal.id = 'editJobModal';
   modal.className = 'worker-modal-overlay';
@@ -1917,7 +1972,7 @@ function editJobDetail(id) {
         <div>
           <span class="quick-modal-kicker">KONVEKSIBOS / EDIT</span>
           <h2>Edit Detail Pekerjaan</h2>
-          <p>Perubahan tidak menghapus riwayat pekerjaan.</p>
+          <p>Riwayat laporan dan setoran tetap dipertahankan.</p>
         </div>
         <button type="button" class="quick-close"
           id="closeEditJob">×</button>
@@ -1925,9 +1980,7 @@ function editJobDetail(id) {
 
       <form id="editJobForm">
         <label>Pekerja</label>
-        <select name="workerId" required>
-          ${workerOptions}
-        </select>
+        <select name="workerId" required>${workerOptions}</select>
 
         <label>Nama barang</label>
         <input name="product" required
@@ -1950,6 +2003,12 @@ function editJobDetail(id) {
         <label>Tarif upah (Rp)</label>
         <input name="rate" type="number" min="0" step="1"
           required value="${Number(job.rate) || 0}">
+
+        <hr>
+        <h3>Riwayat Laporan Pekerjaan</h3>
+        <p>Edit jumlah, keterangan, dan kekurangan pada masing-masing laporan.</p>
+
+        ${reportsHTML || '<small>Belum ada laporan pekerjaan.</small>'}
 
         <button type="submit" class="primary-button"
           style="width:100%;margin-top:16px">
@@ -1986,21 +2045,8 @@ function editJobDetail(id) {
       const quantity = Number(data.get('quantity'));
       const rate = Number(data.get('rate'));
 
-      const reports = Array.isArray(job.workReports)
-        ? job.workReports : [];
-
-      const reported = reports.reduce((sum, report) =>
-        sum + (Number(report.quantity) || 0), 0);
-
-      const returned = Number(job.returned || 0);
-
       if (!Number.isInteger(quantity) || quantity < 1) {
         alert('Jumlah barang harus berupa bilangan bulat positif.');
-        return;
-      }
-
-      if (quantity < Math.max(reported, returned)) {
-        alert('Jumlah barang tidak boleh lebih kecil dari hasil laporan atau setoran.');
         return;
       }
 
@@ -2009,7 +2055,61 @@ function editJobDetail(id) {
         return;
       }
 
-      if (!confirm('Simpan perubahan detail pekerjaan ini?')) return;
+      const updatedReports = reports.map((report, index) => {
+        const reportQuantity = Number(data.get(`reportQuantity_${index}`));
+        const note = String(data.get(`reportNote_${index}`) || '');
+        const shortageQuantity = Number(
+          data.get(`reportShortage_${index}`) || 0
+        );
+
+        const needsShortage = [
+          'Kurang mangset',
+          'Kurang rip',
+          'Kurang mangset + rip'
+        ].includes(note);
+
+        if (!Number.isInteger(reportQuantity) || reportQuantity < 1) {
+          throw new Error(`Jumlah laporan ${index + 1} tidak valid.`);
+        }
+
+        if (!reportNotes.includes(note)) {
+          throw new Error(`Keterangan laporan ${index + 1} tidak valid.`);
+        }
+
+        if (!Number.isInteger(shortageQuantity) || shortageQuantity < 0) {
+          throw new Error(`Jumlah kekurangan laporan ${index + 1} tidak valid.`);
+        }
+
+        if (needsShortage && shortageQuantity < 1) {
+          throw new Error(`Isi jumlah kekurangan laporan ${index + 1}.`);
+        }
+
+        return {
+          ...report,
+          quantity: reportQuantity,
+          note,
+          shortageQuantity: needsShortage ? shortageQuantity : 0
+        };
+      });
+
+      const reported = updatedReports.reduce((sum, report) =>
+        sum + report.quantity, 0);
+
+      if (reported > quantity) {
+        alert('Total laporan tidak boleh melebihi jumlah barang.');
+        return;
+      }
+
+      if (!confirm('Simpan perubahan detail dan riwayat laporan?')) return;
+
+      const oldCompleted = reports.reduce((sum, report) =>
+        sum + (report.note === 'Selesai'
+          ? Number(report.quantity) || 0 : 0), 0);
+
+      const newCompleted = updatedReports.reduce((sum, report) =>
+        sum + (report.note === 'Selesai' ? report.quantity : 0), 0);
+
+      const depositAdjustment = newCompleted - oldCompleted;
 
       job.workerId = String(data.get('workerId'));
       job.product = String(data.get('product')).trim();
@@ -2017,13 +2117,32 @@ function editJobDetail(id) {
       job.quantity = quantity;
       job.unit = String(data.get('unit'));
       job.rate = rate;
+      job.workReports = updatedReports;
+      job.payableQuantity = reported;
+
+      if (depositAdjustment !== 0) {
+        job.returned = Math.max(
+          0,
+          Number(job.returned || 0) + depositAdjustment
+        );
+
+        if (!Array.isArray(job.depositHistory)) {
+          job.depositHistory = [];
+        }
+
+        job.depositHistory.push({
+          id: crypto.randomUUID(),
+          quantity: depositAdjustment,
+          date: new Date().toISOString(),
+          note: 'Penyesuaian setoran akibat edit laporan'
+        });
+      }
 
       saveJobs();
       close();
       renderJobCard(id);
     });
 }
-
 
 function recordDeposit(id) {
   const job = jobs.find(j => j.id === id);
