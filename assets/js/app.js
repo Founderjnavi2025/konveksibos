@@ -2226,7 +2226,15 @@ function renderPayrollPayment(workerId) {
         <div>
           <span class="payroll-kicker">PEMBAYARAN GAJI</span>
           <h3>${payrollEscape(worker.name || 'Pekerja')}</h3>
-          <p>${rows.length} catatan pekerjaan</p>
+          <p>
+            ${rows.length} catatan pekerjaan |
+            Total pekerjaan: ${jobs.length} |
+            Pekerjaan milik pekerja ini:
+            ${jobs.filter(j => String(j.workerId) === String(workerId)).length} |
+            Laporan:
+            ${jobs.filter(j => String(j.workerId) === String(workerId))
+              .reduce((n, j) => n + (Array.isArray(j.workReports) ? j.workReports.length : 0), 0)}
+          </p>
         </div>
       </div>
 
