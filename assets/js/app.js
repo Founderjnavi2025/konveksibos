@@ -2133,7 +2133,8 @@ function renderPayroll() {
               <span>${payrollEscape(worker.name || 'Tanpa nama')}</span>
             </button>
 
-            <button type="button" class="payroll-segment-action">
+            <button type="button" class="payroll-segment-action"
+              onclick="renderPayrollPayment('${payrollEscape(worker.id)}')">
               Bayar Gaji
             </button>
 
@@ -2150,6 +2151,121 @@ function renderPayroll() {
         `).join('') || `
           <div class="payroll-simple-empty">
             Belum ada pekerja terdaftar.
+          </div>
+        `}
+      </div>
+    </section>
+  `;
+}
+
+function renderPayrollPayment(workerId) {
+  const worker = workers.find(
+    item => String(item.id) === String(workerId)
+  );
+  if (!worker) return;
+
+  const rows = [];
+
+  jobs
+    .filter(job => String(job.workerId) === String(workerId))
+    .forEach(job => {
+      const reports = Array.isArray(job.workReports)
+        ? job.workReports
+        : [];
+
+      reports.forEach(report => {
+        const quantity = Number(report.quantity) || 0;
+        const rate = Number(job.rate) || 0;
+
+        const pay = job.unit === 'lusin'
+          ? quantity / 12 * rate
+          : quantity * rate;
+
+        rows.push({
+          date: report.date,
+          product: job.product || '-',
+          type: job.type || '-',
+          quantity,
+          unit: job.unit || 'pcs',
+          note: report.note || 'Laporan pekerjaan',
+          pay
+        });
+      });
+
+      const reported = reports.reduce(
+        (sum, report) => sum + (Number(report.quantity) || 0),
+        0
+      );
+
+      const outstanding = Math.max(
+        0,
+        Number(job.quantity || 0) - reported
+      );
+
+      if (outstanding > 0) {
+        rows.push({
+          date: job.createdAt,
+          product: job.product || '-',
+          type: job.type || '-',
+          quantity: outstanding,
+          unit: job.unit || 'pcs',
+          note: 'Belum dilaporkan',
+          pay: 0
+        });
+      }
+    });
+
+  rows.sort((a, b) =>
+    String(a.date || '').localeCompare(String(b.date || ''))
+  );
+
+  const total = rows.reduce((sum, row) => sum + row.pay, 0);
+
+  const formatDate = value => {
+    const date = payrollDate(value);
+    return date
+      ? payrollISO(date).split('-').reverse().join('/')
+      : '-';
+  };
+
+  mainAction.style.display = 'none';
+  pageTitle.textContent = 'Bayar Gaji';
+  breadcrumb.textContent = 'Payroll / Bayar Gaji';
+  description.textContent = 'Rincian pekerjaan dan upah pekerja.';
+
+  content.innerHTML = `
+    <section class="panel payroll-panel">
+      <button type="button" class="secondary"
+        onclick="renderPayroll()">
+        ← Kembali ke Payroll
+      </button>
+
+      <div class="payroll-simple-heading">
+        <div>
+          <span class="payroll-kicker">PEMBAYARAN GAJI</span>
+          <h3>${payrollEscape(worker.name || 'Pekerja')}</h3>
+          <p>${rows.length} catatan pekerjaan</p>
+        </div>
+      </div>
+
+      <div class="payroll-total-card">
+        <span>Total upah tercatat</span>
+        <strong>${payrollMoney(total)}</strong>
+      </div>
+
+      <div class="payroll-simple-list">
+        ${rows.map(row => `
+          <article class="payroll-job-row">
+            <div>
+              <strong>${payrollEscape(row.product)}</strong>
+              <small>${payrollEscape(row.type)} · ${formatDate(row.date)}</small>
+              <small>${row.quantity} ${payrollEscape(row.unit)} · ${payrollEscape(row.note)}</small>
+            </div>
+            <strong>${payrollMoney(row.pay)}</strong>
+          </article>
+        `).join('') || `
+          <div class="payroll-simple-empty">
+            Belum ada catatan pekerjaan.
           </div>
         `}
       </div>
