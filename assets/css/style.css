@@ -3668,3 +3668,54 @@ td strong {
     font-size: 9px;
   }
 }
+
+
+/* ACCOUNT MENU */
+.account-wrap { position: relative; }
+
+.account-avatar {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: #e8edf5;
+  color: var(--navy);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.account-menu {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 230px;
+  padding: 12px;
+  background: #171e2b;
+  color: white;
+  border: 1px solid #303b4d;
+  border-radius: 12px;
+  z-index: 9999;
+  box-shadow: 0 12px 35px #0004;
+}
+
+.account-menu[hidden] { display: none; }
+
+.account-info {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  overflow-wrap: anywhere;
+}
+
+.account-info small { color: #9ba9bd; }
+
+.account-menu button {
+  width: 100%;
+  padding: 11px;
+  margin-top: 10px;
+  border: 0;
+  border-radius: 8px;
+  background: #a83242;
+  color: white;
+  cursor: pointer;
+}

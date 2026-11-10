@@ -49,7 +49,26 @@ Deno.serve(async (req) => {
       return response({ error: "Session tidak valid" }, 401);
     }
 
-    const amount = 50000;
+    // Ambil harga dari katalog paket aktif
+    const { data: plan, error: planError } = await admin
+      .from("pricing_plans")
+      .select("code, name, price, duration_days")
+      .eq("code", "VIP-30")
+      .eq("active", true)
+      .maybeSingle();
+
+    if (planError) throw planError;
+
+    if (!plan) {
+      return response({ error: "Paket VIP-30 tidak tersedia" }, 404);
+    }
+
+    const amount = Number(plan.price);
+
+    if (!Number.isSafeInteger(amount) || amount <= 0) {
+      return response({ error: "Harga paket tidak valid" }, 500);
+    }
+
     const orderId = `VIP-${crypto.randomUUID()}`;
 
     const { error: insertError } = await admin
@@ -77,10 +96,10 @@ Deno.serve(async (req) => {
             gross_amount: amount,
           },
           item_details: [{
-            id: "VIP-30",
+            id: plan.code,
             price: amount,
             quantity: 1,
-            name: "KonveksiBos VIP 30 Hari",
+            name: plan.name,
           }],
           customer_details: {
             email: authData.user.email,

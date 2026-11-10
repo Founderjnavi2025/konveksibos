@@ -220,8 +220,44 @@
       roomId,
       user: currentUser,
       saveWorkers,
-      saveJobs
+      saveJobs,
+      signOut: () => sb.auth.signOut()
     };
+
+    const avatar = document.getElementById('accountAvatar');
+    const menu = document.getElementById('accountMenu');
+    const email = document.getElementById('accountEmail');
+    const logout = document.getElementById('accountLogout');
+
+    if (avatar && menu && email && logout) {
+      email.textContent = currentUser.email || 'Akun pengguna';
+
+      avatar.onclick = () => {
+        menu.hidden = !menu.hidden;
+        avatar.setAttribute('aria-expanded', String(!menu.hidden));
+      };
+
+      document.addEventListener('click', (event) => {
+        if (!event.target.closest('.account-wrap')) {
+          menu.hidden = true;
+          avatar.setAttribute('aria-expanded', 'false');
+        }
+      });
+
+      logout.onclick = async () => {
+        if (!confirm('Yakin ingin keluar dari KonveksiBos?')) return;
+
+        logout.disabled = true;
+
+        try {
+          const { error } = await window.KBCloud.signOut();
+          if (error) throw error;
+        } catch (error) {
+          alert('Gagal logout: ' + error.message);
+          logout.disabled = false;
+        }
+      };
+    }
 
     console.log('KonveksiBos cloud active:', roomId);
   }
