@@ -26,18 +26,26 @@
       <p style="color:#9ba9bd">Business Workspace</p>
 
       <div id="kbAuthContent">
-        <h3>Masuk ke akun</h3>
-        <input id="kbEmail" type="email" placeholder="Email"
-          style="width:100%;padding:13px;margin:7px 0;box-sizing:border-box">
-        <input id="kbPassword" type="password" placeholder="Password"
-          style="width:100%;padding:13px;margin:7px 0;box-sizing:border-box">
-        <button id="kbLogin" style="width:100%;padding:13px;margin-top:10px">
-          Masuk
-        </button>
-        <button id="kbRegister" style="width:100%;padding:13px;margin-top:8px">
-          Daftar akun
-        </button>
-        <p id="kbMessage" style="color:#ffbd70"></p>
+        <div style="text-align:center;padding:20px 4px">
+          <div style="font-size:34px;margin-bottom:14px">🏭</div>
+          <h2 style="margin:0 0 10px">Selamat Datang!</h2>
+          <p style="color:#9ba9bd;line-height:1.7">
+            Silakan masuk melalui FastProduction Lab
+            untuk membuka Production Workspace Anda.
+          </p>
+          <div style="margin-top:22px;padding:12px;border-radius:10px;
+            background:#202d3c;color:#8de0ae;font-size:13px">
+            FASTPRODUCTION SSO
+          </div>
+        </div>
+        <p id="kbMessage" style="color:#ffbd70;text-align:center"></p>
+
+        <div hidden>
+          <input id="kbEmail" type="email">
+          <input id="kbPassword" type="password">
+          <button id="kbLogin">Masuk</button>
+          <button id="kbRegister">Daftar akun</button>
+        </div>
       </div>
     </div>
   `;
