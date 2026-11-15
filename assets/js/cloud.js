@@ -51,6 +51,99 @@
     else console.log('[KonveksiBos]', value);
   };
 
+  // AMBIL DATA SSO DARI URL FRAGMENT
+  function readSsoPayload() {
+    const hash = window.location.hash.slice(1);
+    if (!hash) return null;
+
+    const params = new URLSearchParams(hash);
+    const sso = params.get('sso');
+
+    if (!sso) return null;
+
+    // Bersihkan token dari address bar.
+    history.replaceState(
+      null,
+      document.title,
+      location.pathname + location.search
+    );
+
+    const handoff = new URLSearchParams(sso);
+
+    return {
+      token_hash: handoff.get('token_hash'),
+      type: handoff.get('type'),
+      room_id: handoff.get('room_id')
+    };
+  }
+
+
+  async function consumeSso(payload) {
+    if (
+      !payload ||
+      !payload.token_hash ||
+      payload.type !== 'magiclink' ||
+      !payload.room_id
+    ) {
+      throw new Error('Data SSO tidak lengkap atau tidak valid.');
+    }
+
+    message('Memverifikasi identitas FastProduction...');
+
+    const { data, error } = await sb.auth.verifyOtp({
+      token_hash: payload.token_hash,
+      type: 'magiclink'
+    });
+
+    if (error) throw error;
+
+    const user = data.user || data.session?.user;
+
+    if (!user) {
+      throw new Error('Identitas pengguna tidak ditemukan.');
+    }
+
+    currentUser = user;
+
+    message('Memeriksa akses Production Room...');
+
+    // Pastikan pengguna benar-benar anggota room tujuan
+    const { data: membership, error: memberError } = await sb
+      .from('room_members')
+      .select('room_id,role')
+      .eq('user_id', user.id)
+      .eq('room_id', payload.room_id)
+      .maybeSingle();
+
+    if (memberError) throw memberError;
+
+    if (!membership) {
+      throw new Error(
+        'Akses ditolak. Akun ini bukan anggota Production Room tujuan.'
+      );
+    }
+
+    // Pastikan room masih tersedia
+    const { data: room, error: roomError } = await sb
+      .from('rooms')
+      .select('id,status')
+      .eq('id', payload.room_id)
+      .maybeSingle();
+
+    if (roomError) throw roomError;
+
+    if (!room || room.status !== 'active') {
+      throw new Error('Production Room tidak ditemukan atau tidak aktif.');
+    }
+
+    message('Akses diterima. Membuka Production Room...');
+
+    // SSO tidak boleh memigrasikan data lokal secara otomatis
+    await activateRoom(payload.room_id, {
+      allowLocalMigration: false
+    });
+  }
+
   async function loadWorkspace(user) {
     currentUser = user;
 
@@ -62,7 +155,6 @@
 
     if (profileError) throw profileError;
 
-    // SUPER ADMIN: langsung masuk Command Center
     if (profile?.platform_role === 'super_admin') {
       window.location.href = 'pages/super-admin.html';
       return;
@@ -76,7 +168,7 @@
     if (memberError) throw memberError;
 
     if (!memberships || !memberships.length) {
-      showCreateRoom(profile?.platform_role === 'super_admin');
+      showCreateRoom(false);
       return;
     }
 
@@ -88,7 +180,7 @@
     if (roomError) throw roomError;
 
     if (!rooms || !rooms.length) {
-      showCreateRoom(profile?.platform_role === 'super_admin');
+      showCreateRoom(false);
       return;
     }
 
@@ -156,7 +248,7 @@
     document.getElementById('kbLogout').onclick = () => sb.auth.signOut();
   }
 
-  async function activateRoom(id) {
+  async function activateRoom(id, options = {}) {
     roomId = id;
     message('Mengambil data cloud...');
 
@@ -168,18 +260,20 @@
     if (workerResult.error) throw workerResult.error;
     if (jobResult.error) throw jobResult.error;
 
-    // MIGRASI DATA LOKAL KE CLOUD JIKA TABEL MASIH KOSONG
-    const localData = window.KBApp.cloudReady();
+    // MIGRASI DATA LOKAL HANYA UNTUK LOGIN MANUAL
+    if (options.allowLocalMigration !== false) {
+      const localData = window.KBApp.cloudReady();
 
-    if (!workerResult.data.length && localData.workers.length) {
-      await saveWorkers();
+      if (!workerResult.data.length && localData.workers.length) {
+        await saveWorkers();
+      }
+
+      if (!jobResult.data.length && localData.jobs.length) {
+        await saveJobs();
+      }
     }
 
-    if (!jobResult.data.length && localData.jobs.length) {
-      await saveJobs();
-    }
-
-    // Ambil ulang data setelah migrasi
+    // Ambil ulang data setelah migrasi jika diperlukan
     [workerResult, jobResult] = await Promise.all([
       sb.from('workers').select('*').eq('room_id', id),
       sb.from('jobs').select('*').eq('room_id', id)
@@ -398,6 +492,15 @@
   });
 
   try {
+    // PRIORITAS: SSO DARI FASTPRODUCTION
+    const ssoPayload = readSsoPayload();
+
+    if (ssoPayload) {
+      await consumeSso(ssoPayload);
+      return;
+    }
+
+    // LOGIN MANUAL / SESSION LAMA TETAP BERFUNGSI
     const { data, error } = await sb.auth.getSession();
     if (error) throw error;
 
@@ -405,6 +508,7 @@
       await loadWorkspace(data.session.user);
     }
   } catch (e) {
-    message(e.message);
+    console.error('KonveksiBos authentication:', e);
+    message('Gagal masuk: ' + e.message);
   }
 })();
